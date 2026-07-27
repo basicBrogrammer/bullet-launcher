@@ -64,6 +64,17 @@
         tools:text="2h 11m"
         tools:visibility="visible" />
 
+    <!-- App drawer overlay (keeps bottom sheet visible for drag-and-drop) -->
+    <FrameLayout
+        android:id="@+id/appDrawerOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/primaryShadeDarkColor"
+        android:clickable="true"
+        android:elevation="4dp"
+        android:focusable="true"
+        android:visibility="gone" />
+
     <!-- Home apps bottom sheet: 5 columns × 3 rows -->
     <LinearLayout
         android:id="@+id/homeAppsBottomSheet"
@@ -71,7 +82,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:background="@drawable/bg_home_apps_bottom_sheet"
-        android:elevation="8dp"
+        android:elevation="16dp"
         android:orientation="vertical"
         android:paddingBottom="32dp">
 

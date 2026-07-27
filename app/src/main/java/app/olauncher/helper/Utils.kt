@@ -688,21 +688,16 @@ fun Context.getAppIconDrawable(
     packageName: String,
     userHandle: UserHandle,
     activityClassName: String? = null,
+    iconPackPackage: String? = Prefs(this).iconPackPackage,
 ): Drawable? {
     if (packageName.isBlank()) return null
-    return try {
-        val launcher = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        val activities = launcher.getActivityList(packageName, userHandle)
-        val info = if (!activityClassName.isNullOrBlank()) {
-            activities.find { it.componentName.className == activityClassName } ?: activities.firstOrNull()
-        } else {
-            activities.firstOrNull()
-        }
-        info?.getBadgedIcon(0) ?: packageManager.getApplicationIcon(packageName)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
+    return IconPackHelper.loadAppIcon(
+        context = this,
+        packageName = packageName,
+        activityClassName = activityClassName,
+        userHandle = userHandle,
+        iconPackPackage = iconPackPackage,
+    )
 }
 
 fun Context.getShortcutIconDrawable(

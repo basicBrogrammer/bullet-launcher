@@ -74,9 +74,15 @@ class ScreenshotDemoTest {
         val iconPx = (48 * density).toInt()
         homeApps.forEachIndexed { index, (id, label) ->
             root.findViewById<ImageView>(id).apply {
-                setImageDrawable(BitmapDrawable(resources, demoIconBitmap(label, iconPx, index)))
-                setBlackAndWhite(true)
-                contentDescription = label
+                if (index + 1 == app.olauncher.data.Constants.HOME_DRAWER_SLOT) {
+                    setImageDrawable(BitmapDrawable(resources, demoDrawerIconBitmap(iconPx)))
+                    setBlackAndWhite(false)
+                    contentDescription = "App drawer"
+                } else {
+                    setImageDrawable(BitmapDrawable(resources, demoIconBitmap(label, iconPx, index)))
+                    setBlackAndWhite(true)
+                    contentDescription = label
+                }
                 visibility = View.VISIBLE
             }
         }
@@ -134,6 +140,23 @@ class ScreenshotDemoTest {
         val letter = label.first().uppercaseChar().toString()
         val textY = cy - (textPaint.descent() + textPaint.ascent()) / 2f
         canvas.drawText(letter, cx, textY, textPaint)
+        return bitmap
+    }
+
+    private fun demoDrawerIconBitmap(size: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
+        val pad = size * 0.18f
+        val gap = size * 0.1f
+        val cell = (size - pad * 2 - gap) / 2f
+        for (row in 0..1) {
+            for (col in 0..1) {
+                val left = pad + col * (cell + gap)
+                val top = pad + row * (cell + gap)
+                canvas.drawRoundRect(left, top, left + cell, top + cell, cell * 0.2f, cell * 0.2f, paint)
+            }
+        }
         return bitmap
     }
 

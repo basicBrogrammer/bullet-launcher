@@ -55,6 +55,9 @@
     <string name="donate">Donate</string>
     <string name="swipe_up_for_apps">1. Swipe up for all apps\n2. Long press anywhere for settings</string>
     <string name="apps_on_home_screen">Apps on home screen</string>
+    <string name="icon_pack">Icon pack</string>
+    <string name="app_drawer">App drawer</string>
+    <string name="drag_to_home_tip">Long-press an app, then drop it on the dock</string>
     <string name="daily_wallpaper_update">Daily new wallpaper</string>
     <string name="left">Left</string>
     <string name="right">Right</string>

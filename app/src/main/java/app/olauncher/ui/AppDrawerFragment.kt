@@ -46,6 +46,7 @@ class AppDrawerFragment : BaseFragment() {
 
     private var flag = Constants.FLAG_LAUNCH_APP
     private var canRename = false
+    private var isOverlay = false
     private var currentAppList: List<AppModel>? = null
     private var currentPrivateSpaceApps: List<AppModel>? = null
     private var currentPrivateSpaceLocked: Boolean = true
@@ -70,6 +71,7 @@ class AppDrawerFragment : BaseFragment() {
         arguments?.let {
             flag = it.getInt(Constants.Key.FLAG, Constants.FLAG_LAUNCH_APP)
             canRename = it.getBoolean(Constants.Key.RENAME, false)
+            isOverlay = it.getBoolean(Constants.Key.OVERLAY, false)
         }
 
         initViews()
@@ -154,10 +156,7 @@ class AppDrawerFragment : BaseFragment() {
             prefs.appLabelAlignment,
             appClickListener = { appModel ->
                 viewModel.selectedApp(appModel, flag)
-                if (flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
-                    findNavController().popBackStack(R.id.mainFragment, false)
-                else
-                    findNavController().popBackStack()
+                dismissDrawer(popToHome = flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
             },
             appInfoListener = {
                 openAppInfo(
@@ -165,7 +164,7 @@ class AppDrawerFragment : BaseFragment() {
                     it.user,
                     it.appPackage
                 )
-                findNavController().popBackStack(R.id.mainFragment, false)
+                dismissDrawer(popToHome = true)
             },
             appDeleteListener = { appModel ->
                 when (appModel) {
@@ -210,12 +209,14 @@ class AppDrawerFragment : BaseFragment() {
 
                 prefs.hiddenApps = newSet
                 if (newSet.isEmpty())
-                    findNavController().popBackStack()
+                    dismissDrawer()
                 if (prefs.firstHide) {
                     binding.search.hideKeyboard()
                     prefs.firstHide = false
                     viewModel.showDialog.postValue(Constants.Dialog.HIDDEN)
-                    findNavController().navigate(R.id.action_appListFragment_to_settingsFragment2)
+                    if (!isOverlay) {
+                        findNavController().navigate(R.id.action_appListFragment_to_settingsFragment2)
+                    }
                 }
                 viewModel.getAppList()
                 viewModel.getHiddenApps()
@@ -234,8 +235,10 @@ class AppDrawerFragment : BaseFragment() {
             },
             privateSpaceSettingsListener = {
                 viewModel.openPrivateSpaceSettings()
-                findNavController().popBackStack(R.id.mainFragment, false)
-            }
+                dismissDrawer(popToHome = true)
+            },
+            enableDragToHome = isOverlay,
+            iconPackPackage = prefs.iconPackPackage,
         )
 
         linearLayoutManager = object : LinearLayoutManager(requireContext()) {
@@ -320,7 +323,7 @@ class AppDrawerFragment : BaseFragment() {
                 in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_15 ->
                     prefs.setAppName(flag, name)
             }
-            findNavController().popBackStack()
+            dismissDrawer()
         }
     }
 
@@ -352,9 +355,22 @@ class AppDrawerFragment : BaseFragment() {
     }
 
     private fun checkMessageAndExit() {
-        findNavController().popBackStack()
+        dismissDrawer(popToHome = true)
         if (flag == Constants.FLAG_LAUNCH_APP)
             viewModel.checkForMessages.call()
+    }
+
+    private fun dismissDrawer(popToHome: Boolean = false) {
+        if (isOverlay) {
+            (parentFragment as? HomeFragment)?.closeAppDrawerOverlay()
+            return
+        }
+        try {
+            if (popToHome) findNavController().popBackStack(R.id.mainFragment, false)
+            else findNavController().popBackStack()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onStart() {

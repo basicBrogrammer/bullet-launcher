@@ -1,6 +1,7 @@
 package app.olauncher.ui
 
 import android.app.admin.DevicePolicyManager
+import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
@@ -8,6 +9,7 @@ import android.content.res.Configuration
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.view.DragEvent
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +18,7 @@ import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
@@ -35,6 +38,7 @@ import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
 import app.olauncher.helper.getAppIconDrawable
 import app.olauncher.helper.getChangedAppTheme
+import app.olauncher.helper.getColorFromAttr
 import app.olauncher.helper.getShortcutIconDrawable
 import app.olauncher.helper.getUserHandleFromString
 import app.olauncher.helper.isPackageInstalled
@@ -89,6 +93,21 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
         initClickListeners()
+        initHomeAppDragListeners()
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (binding.appDrawerOverlay.isVisible) {
+                        closeAppDrawerOverlay()
+                    } else {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        )
     }
 
     override fun onResume() {
@@ -148,7 +167,11 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         when {
             view.id in homeAppViewIds -> {
                 val location = view.tag.toString().toInt()
-                showAppList(location, prefs.getAppName(location).isNotEmpty(), true)
+                if (location == Constants.HOME_DRAWER_SLOT) {
+                    openAppDrawerOverlay(Constants.FLAG_LAUNCH_APP)
+                } else {
+                    showAppList(location, prefs.getAppName(location).isNotEmpty(), true)
+                }
             }
             view.id == R.id.clock -> {
                 showAppList(Constants.FLAG_SET_CLOCK_APP)
@@ -305,11 +328,19 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
         val homeAppsNum = prefs.homeAppsNum
         binding.homeAppsBottomSheet.isVisible = homeAppsNum > 0
-        if (homeAppsNum == 0) return
+        if (homeAppsNum == 0) {
+            closeAppDrawerOverlay()
+            return
+        }
 
-        for (location in 1..homeAppsNum) {
+        // Always show the full 5×3 grid; slot 13 is the app-drawer button.
+        for (location in 1..Constants.MAX_HOME_APPS) {
             val appView = homeAppViews[location - 1]
             appView.visibility = View.VISIBLE
+            if (location == Constants.HOME_DRAWER_SLOT) {
+                showDrawerSlotIcon(appView)
+                continue
+            }
             if (!setHomeAppIcon(
                     appView,
                     prefs.getAppName(location),
@@ -323,6 +354,16 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 prefs.clearHomeApp(location)
             }
         }
+        binding.homeAppsBottomSheet.post { updateDrawerOverlayPadding() }
+    }
+
+    private fun showDrawerSlotIcon(imageView: ImageView) {
+        imageView.setImageResource(R.drawable.ic_apps_drawer)
+        imageView.setBlackAndWhite(false)
+        imageView.imageTintList = android.content.res.ColorStateList.valueOf(
+            requireContext().getColorFromAttr(R.attr.primaryColor)
+        )
+        imageView.contentDescription = getString(R.string.app_drawer)
     }
 
     private fun setHomeAppIcon(
@@ -336,6 +377,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     ): Boolean {
         val userHandle = getUserHandleFromString(requireContext(), userString)
         imageView.contentDescription = appName.ifBlank { getString(R.string.app) }
+        imageView.imageTintList = null
 
         if (isShortcut) {
             val launcherApps = requireContext().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
@@ -356,8 +398,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                         imageView.setImageDrawable(icon)
                         imageView.setBlackAndWhite(true)
                     } else {
-                        imageView.setImageResource(R.drawable.ic_home_app_empty)
-                        imageView.setBlackAndWhite(false)
+                        showEmptyHomeAppSlot(imageView)
                     }
                     return true
                 }
@@ -371,7 +412,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         }
 
         if (packageName.isNotBlank() && isPackageInstalled(requireContext(), packageName, userString)) {
-            val icon = requireContext().getAppIconDrawable(packageName, userHandle, activityClassName)
+            val icon = requireContext().getAppIconDrawable(
+                packageName,
+                userHandle,
+                activityClassName,
+                prefs.iconPackPackage,
+            )
             if (icon != null) {
                 imageView.setImageDrawable(icon)
                 imageView.setBlackAndWhite(true)
@@ -386,6 +432,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun showEmptyHomeAppSlot(imageView: ImageView) {
+        imageView.imageTintList = null
         imageView.setImageResource(R.drawable.ic_home_app_empty)
         imageView.setBlackAndWhite(false)
         imageView.contentDescription = getString(R.string.app)
@@ -460,6 +507,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun homeAppClicked(location: Int) {
+        if (location == Constants.HOME_DRAWER_SLOT) {
+            openAppDrawerOverlay(Constants.FLAG_LAUNCH_APP)
+            return
+        }
         launchAppOrShortcut(
             appName = prefs.getAppName(location),
             packageName = prefs.getAppPackage(location),
@@ -497,6 +548,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun showAppList(flag: Int, rename: Boolean = false, includeHiddenApps: Boolean = false) {
+        // Clock/calendar/screen-time and settings still use the nav drawer.
+        // Home grid launch + home-slot assignment use the overlay so the dock stays droppable.
+        if (flag == Constants.FLAG_LAUNCH_APP || flag in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_15) {
+            openAppDrawerOverlay(flag, rename, includeHiddenApps)
+            return
+        }
         viewModel.getAppList(includeHiddenApps)
         try {
             findNavController().navigate(
@@ -515,6 +572,77 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 )
             )
             e.printStackTrace()
+        }
+    }
+
+    fun openAppDrawerOverlay(
+        flag: Int = Constants.FLAG_LAUNCH_APP,
+        rename: Boolean = false,
+        includeHiddenApps: Boolean = false,
+    ) {
+        viewModel.getAppList(includeHiddenApps)
+        val drawer = AppDrawerFragment().apply {
+            arguments = bundleOf(
+                Constants.Key.FLAG to flag,
+                Constants.Key.RENAME to rename,
+                Constants.Key.OVERLAY to true,
+            )
+        }
+        childFragmentManager.beginTransaction()
+            .replace(R.id.appDrawerOverlay, drawer, "home_app_drawer")
+            .commitAllowingStateLoss()
+        binding.appDrawerOverlay.isVisible = true
+        updateDrawerOverlayPadding()
+    }
+
+    fun closeAppDrawerOverlay() {
+        val existing = childFragmentManager.findFragmentByTag("home_app_drawer")
+        if (existing != null) {
+            childFragmentManager.beginTransaction()
+                .remove(existing)
+                .commitAllowingStateLoss()
+        }
+        binding.appDrawerOverlay.isVisible = false
+    }
+
+    private fun updateDrawerOverlayPadding() {
+        val sheetHeight = binding.homeAppsBottomSheet.height
+        if (sheetHeight > 0) {
+            binding.appDrawerOverlay.setPadding(0, 0, 0, sheetHeight)
+        }
+    }
+
+    private fun initHomeAppDragListeners() {
+        homeAppViews.forEach { appView ->
+            appView.setOnDragListener { view, event ->
+                val location = view.tag?.toString()?.toIntOrNull() ?: return@setOnDragListener false
+                if (location == Constants.HOME_DRAWER_SLOT) return@setOnDragListener false
+                when (event.action) {
+                    DragEvent.ACTION_DRAG_STARTED ->
+                        event.clipDescription?.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) == true
+
+                    DragEvent.ACTION_DRAG_ENTERED -> {
+                        view.alpha = 0.45f
+                        true
+                    }
+
+                    DragEvent.ACTION_DRAG_EXITED, DragEvent.ACTION_DRAG_ENDED -> {
+                        view.alpha = 1f
+                        true
+                    }
+
+                    DragEvent.ACTION_DROP -> {
+                        view.alpha = 1f
+                        val appModel = event.localState as? AppModel ?: return@setOnDragListener false
+                        if (appModel is AppModel.PrivateSpaceHeader) return@setOnDragListener false
+                        viewModel.selectedApp(appModel, location)
+                        closeAppDrawerOverlay()
+                        true
+                    }
+
+                    else -> true
+                }
+            }
         }
     }
 

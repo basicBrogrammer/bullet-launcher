@@ -5,6 +5,7 @@ object Constants {
     object Key {
         const val FLAG = "flag"
         const val RENAME = "rename"
+        const val OVERLAY = "overlay"
     }
 
     object Dialog {
@@ -71,6 +72,8 @@ object Constants {
     const val MAX_HOME_APPS = 15
     const val HOME_APPS_COLUMNS = 5
     const val HOME_APPS_ROWS = 3
+    /** Bottom-row center cell in the 5×3 home grid — opens the app drawer. */
+    const val HOME_DRAWER_SLOT = 13
 
     const val FLAG_SET_HOME_APP_1 = 1
     const val FLAG_SET_HOME_APP_2 = 2

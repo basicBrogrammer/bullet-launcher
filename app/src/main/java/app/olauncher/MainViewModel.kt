@@ -107,6 +107,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun saveHomeApp(appModel: AppModel, position: Int) {
+        if (position == Constants.HOME_DRAWER_SLOT) return
         when (appModel) {
             is AppModel.PrivateSpaceHeader -> return
             is AppModel.App -> {

@@ -1,5 +1,6 @@
 package app.olauncher.ui
 
+import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -25,6 +26,7 @@ import app.olauncher.R
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentSettingsBinding
+import app.olauncher.helper.IconPackHelper
 import app.olauncher.helper.animateAlpha
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.getColorFromAttr
@@ -80,6 +82,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         // populateHomeButtonRecents()
         populateWallpaperText()
         populateAppThemeText()
+        populateIconPackText()
         populateTextSize()
         populateAlignment()
         populateStatusBar()
@@ -134,6 +137,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             R.id.dateTimeOff -> toggleDateTime(Constants.DateTime.OFF)
             R.id.dateOnly -> toggleDateTime(Constants.DateTime.DATE_ONLY)
             R.id.appThemeText -> binding.appThemeSelectLayout.visibility = View.VISIBLE
+            R.id.iconPackText -> showIconPackPicker()
             R.id.themeLight -> updateTheme(AppCompatDelegate.MODE_NIGHT_NO)
             R.id.themeDark -> updateTheme(AppCompatDelegate.MODE_NIGHT_YES)
             R.id.themeSystem -> updateTheme(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
@@ -246,6 +250,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         binding.search.setOnClickListener(this)
         binding.notifications.setOnClickListener(this)
         binding.appThemeText.setOnClickListener(this)
+        binding.iconPackText.setOnClickListener(this)
         binding.themeLight.setOnClickListener(this)
         binding.themeDark.setOnClickListener(this)
         binding.themeSystem.setOnClickListener(this)
@@ -560,6 +565,38 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             AppCompatDelegate.MODE_NIGHT_NO -> binding.appThemeText.text = getString(R.string.light)
             else -> binding.appThemeText.text = getString(R.string.system_default)
         }
+    }
+
+    private fun populateIconPackText() {
+        val pack = prefs.iconPackPackage
+        binding.iconPackText.text = if (pack.isBlank()) {
+            getString(R.string.system_default)
+        } else {
+            IconPackHelper.getInstalledIconPacks(requireContext())
+                .find { it.packageName == pack }?.label ?: pack
+        }
+    }
+
+    private fun showIconPackPicker() {
+        val packs = IconPackHelper.getInstalledIconPacks(requireContext())
+        val labels = mutableListOf(getString(R.string.system_default))
+        val packages = mutableListOf("")
+        packs.forEach {
+            labels += it.label
+            packages += it.packageName
+        }
+        val selected = packages.indexOf(prefs.iconPackPackage).coerceAtLeast(0)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.icon_pack)
+            .setSingleChoiceItems(labels.toTypedArray(), selected) { dialog, which ->
+                prefs.iconPackPackage = packages[which]
+                IconPackHelper.clearCache()
+                populateIconPackText()
+                viewModel.refreshHome(false)
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
     }
 
     private fun populateTextSize() {

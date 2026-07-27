@@ -42,6 +42,7 @@ class Prefs(context: Context) {
     private val SCREEN_TIME_LAST_UPDATED = "SCREEN_TIME_LAST_UPDATED"
     private val LAUNCHER_RESTART_TIMESTAMP = "LAUNCHER_RECREATE_TIMESTAMP"
     private val SHOWN_ON_DAY_OF_YEAR = "SHOWN_ON_DAY_OF_YEAR"
+    private val ICON_PACK_PACKAGE = "ICON_PACK_PACKAGE"
     // Home button for recents feature disabled
     // private val HOME_BUTTON_SHOW_RECENTS = "HOME_BUTTON_SHOW_RECENTS"
 
@@ -219,6 +220,11 @@ class Prefs(context: Context) {
     var shownOnDayOfYear: Int
         get() = prefs.getInt(SHOWN_ON_DAY_OF_YEAR, 0)
         set(value) = prefs.edit { putInt(SHOWN_ON_DAY_OF_YEAR, value).apply() }
+
+    /** Empty string = system default icons. Otherwise an installed icon-pack package name. */
+    var iconPackPackage: String
+        get() = prefs.getString(ICON_PACK_PACKAGE, "").orEmpty()
+        set(value) = prefs.edit { putString(ICON_PACK_PACKAGE, value).apply() }
 
     // Home button for recents feature disabled
     // var homeButtonShowRecents: Boolean
