@@ -166,7 +166,7 @@ class ScreenshotDemoTest {
                 // Approximate the pager inset above the dock.
             }
         )
-        journal.setPadding(0, (48 * activity.resources.displayMetrics.density).toInt(), 0, (220 * activity.resources.displayMetrics.density).toInt())
+        journal.setPadding(0, (48 * activity.resources.displayMetrics.density).toInt(), 0, (260 * activity.resources.displayMetrics.density).toInt())
         journal.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
         journal.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
         val recycler = journal.findViewById<RecyclerView>(R.id.bulletList)

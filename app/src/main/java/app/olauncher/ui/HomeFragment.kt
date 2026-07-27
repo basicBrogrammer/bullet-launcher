@@ -424,10 +424,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun updateAddButtonMargin() {
         val params = binding.addBulletButton.layoutParams as FrameLayout.LayoutParams
-        params.bottomMargin = if (binding.homeAppsBottomSheet.isVisible) 200.dpToPx() else 48.dpToPx()
+        params.bottomMargin = if (binding.homeAppsBottomSheet.isVisible) 240.dpToPx() else 48.dpToPx()
         binding.addBulletButton.layoutParams = params
         val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
-        pagerParams.bottomMargin = if (binding.homeAppsBottomSheet.isVisible) 220.dpToPx() else 72.dpToPx()
+        pagerParams.bottomMargin = if (binding.homeAppsBottomSheet.isVisible) 260.dpToPx() else 72.dpToPx()
         val topMargin = if (binding.dateTimeLayout.isVisible) {
             if (binding.clock.isVisible) 140.dpToPx() else 100.dpToPx()
         } else {

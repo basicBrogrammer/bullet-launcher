@@ -70,7 +70,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="48dp"
-        android:layout_marginBottom="220dp"
+        android:layout_marginBottom="260dp"
         android:clipToPadding="false" />
 
     <!-- App drawer overlay (keeps bottom sheet visible for drag-and-drop) -->
@@ -244,7 +244,7 @@
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="200dp"
+        android:layout_marginBottom="240dp"
         android:background="@drawable/bg_fab_add"
         android:contentDescription="@string/add_bullet"
         android:elevation="20dp"
