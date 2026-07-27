@@ -1,7 +1,9 @@
 package app.olauncher.ui
 
+import android.content.ClipData
 import android.content.Context
 import android.content.pm.LauncherApps
+import android.os.Build
 import android.os.UserHandle
 import android.text.Editable
 import android.text.TextWatcher
@@ -20,8 +22,11 @@ import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.databinding.AdapterAppDrawerBinding
 import app.olauncher.databinding.AdapterPrivateSpaceHeaderBinding
+import app.olauncher.helper.getAppIconDrawable
+import app.olauncher.helper.getShortcutIconDrawable
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
+import app.olauncher.helper.setBlackAndWhite
 import app.olauncher.helper.showKeyboard
 import java.text.Normalizer
 
@@ -35,6 +40,8 @@ class AppDrawerAdapter(
     private val appRenameListener: (AppModel, String) -> Unit,
     private val privateSpaceToggleListener: () -> Unit = {},
     private val privateSpaceSettingsListener: () -> Unit = {},
+    private val enableDragToHome: Boolean = false,
+    private val iconPackPackage: String = "",
 ) : ListAdapter<AppModel, RecyclerView.ViewHolder>(DIFF_CALLBACK), Filterable {
 
     companion object {
@@ -119,7 +126,9 @@ class AppDrawerAdapter(
                     appDeleteListener,
                     appInfoListener,
                     appHideListener,
-                    appRenameListener
+                    appRenameListener,
+                    enableDragToHome,
+                    iconPackPackage,
                 )
             }
         } catch (e: Exception) {
@@ -233,9 +242,12 @@ class AppDrawerAdapter(
             appInfoListener: (AppModel) -> Unit,
             appHideListener: (AppModel, Int) -> Unit,
             appRenameListener: (AppModel, String) -> Unit,
+            enableDragToHome: Boolean,
+            iconPackPackage: String,
         ) = with(binding) {
             appHideLayout.visibility = View.GONE
             renameLayout.visibility = View.GONE
+            appRow.visibility = View.VISIBLE
             appTitle.visibility = View.VISIBLE
 
             // Show indicators in title based on app type and state
@@ -246,31 +258,42 @@ class AppDrawerAdapter(
             appTitle.gravity = appLabelGravity
             otherProfileIndicator.isVisible = appModel.user != myUserHandle
 
-            appTitle.setOnClickListener { clickListener(appModel) }
+            bindAppIcon(appModel, iconPackPackage)
 
-            appTitle.setOnLongClickListener {
-                if (appModel.appPackage.isNotEmpty()) {
-                    appDelete.alpha = when (
-                        appModel is AppModel.PinnedShortcut || !root.context.isSystemApp(appModel.appPackage, appModel.user)
-                    ) {
-                        true -> 1.0f
-                        false -> 0.5f
-                    }
-                    appHide.text = if (flag == Constants.FLAG_HIDDEN_APPS)
-                        root.context.getString(R.string.adapter_show)
-                    else
-                        root.context.getString(R.string.adapter_hide)
-                    appTitle.visibility = View.INVISIBLE
-                    appHide.alpha = when (appModel is AppModel.PinnedShortcut) {
-                        true -> 0.5f
-                        false -> 1.0f
-                    }
-                    appHideLayout.visibility = View.VISIBLE
-                    // Only allow renaming non hidden apps
-                    appRename.isVisible = flag != Constants.FLAG_HIDDEN_APPS
+            val openApp = View.OnClickListener { clickListener(appModel) }
+            appRow.setOnClickListener(openApp)
+            appTitle.setOnClickListener(openApp)
+            appIcon.setOnClickListener(openApp)
+
+            val longClick = View.OnLongClickListener {
+                if (appModel.appPackage.isEmpty()) return@OnLongClickListener false
+                if (enableDragToHome) {
+                    startAppDrag(appModel)
+                    return@OnLongClickListener true
                 }
+                appDelete.alpha = when (
+                    appModel is AppModel.PinnedShortcut || !root.context.isSystemApp(appModel.appPackage, appModel.user)
+                ) {
+                    true -> 1.0f
+                    false -> 0.5f
+                }
+                appHide.text = if (flag == Constants.FLAG_HIDDEN_APPS)
+                    root.context.getString(R.string.adapter_show)
+                else
+                    root.context.getString(R.string.adapter_hide)
+                appRow.visibility = View.INVISIBLE
+                appHide.alpha = when (appModel is AppModel.PinnedShortcut) {
+                    true -> 0.5f
+                    false -> 1.0f
+                }
+                appHideLayout.visibility = View.VISIBLE
+                // Only allow renaming non hidden apps
+                appRename.isVisible = flag != Constants.FLAG_HIDDEN_APPS
                 true
             }
+            appRow.setOnLongClickListener(longClick)
+            appTitle.setOnLongClickListener(longClick)
+            appIcon.setOnLongClickListener(longClick)
 
             // Configure rename behavior
             appRename.setOnClickListener {
@@ -285,7 +308,7 @@ class AppDrawerAdapter(
                 }
             }
             etAppRename.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
-                appTitle.visibility = if (hasFocus) View.INVISIBLE else View.VISIBLE
+                appRow.visibility = if (hasFocus) View.INVISIBLE else View.VISIBLE
             }
             etAppRename.addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
@@ -333,13 +356,53 @@ class AppDrawerAdapter(
             appDelete.setOnClickListener { appDeleteListener(appModel) }
             appMenuClose.setOnClickListener {
                 appHideLayout.visibility = View.GONE
-                appTitle.visibility = View.VISIBLE
+                appRow.visibility = View.VISIBLE
             }
             appRenameClose.setOnClickListener {
                 renameLayout.visibility = View.GONE
-                appTitle.visibility = View.VISIBLE
+                appRow.visibility = View.VISIBLE
             }
             appHide.setOnClickListener { appHideListener(appModel, bindingAdapterPosition) }
+        }
+
+        private fun AdapterAppDrawerBinding.bindAppIcon(appModel: AppModel, iconPackPackage: String) {
+            if (appModel.appPackage.isBlank()) {
+                appIcon.setImageDrawable(null)
+                return
+            }
+            val icon = when (appModel) {
+                is AppModel.PinnedShortcut ->
+                    root.context.getShortcutIconDrawable(appModel.appPackage, appModel.shortcutId, appModel.user)
+                        ?: root.context.getAppIconDrawable(appModel.appPackage, appModel.user, null, iconPackPackage)
+
+                is AppModel.App ->
+                    root.context.getAppIconDrawable(
+                        appModel.appPackage,
+                        appModel.user,
+                        appModel.activityClassName,
+                        iconPackPackage,
+                    )
+
+                else -> null
+            }
+            if (icon != null) {
+                appIcon.setImageDrawable(icon)
+                appIcon.setBlackAndWhite(true)
+            } else {
+                appIcon.setImageResource(R.drawable.ic_home_app_empty)
+                appIcon.setBlackAndWhite(false)
+            }
+        }
+
+        private fun startAppDrag(appModel: AppModel) {
+            val clip = ClipData.newPlainText("olauncher_app", appModel.appPackage)
+            val shadow = View.DragShadowBuilder(binding.appIcon)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                binding.root.startDragAndDrop(clip, shadow, appModel, 0)
+            } else {
+                @Suppress("DEPRECATION")
+                binding.root.startDrag(clip, shadow, appModel, 0)
+            }
         }
 
         private fun getAppName(context: Context, appPackage: String, user: UserHandle): String {

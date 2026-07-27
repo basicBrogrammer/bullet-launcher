@@ -1,6 +1,7 @@
 package app.olauncher.ui
 
 import android.app.admin.DevicePolicyManager
+import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
@@ -8,14 +9,16 @@ import android.content.res.Configuration
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.view.DragEvent
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.FrameLayout
-import android.widget.TextView
+import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
@@ -33,7 +36,10 @@ import app.olauncher.databinding.FragmentHomeBinding
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
+import app.olauncher.helper.getAppIconDrawable
 import app.olauncher.helper.getChangedAppTheme
+import app.olauncher.helper.getColorFromAttr
+import app.olauncher.helper.getShortcutIconDrawable
 import app.olauncher.helper.getUserHandleFromString
 import app.olauncher.helper.isPackageInstalled
 import app.olauncher.helper.openAlarmApp
@@ -41,6 +47,7 @@ import app.olauncher.helper.openCalendar
 import app.olauncher.helper.openCameraApp
 import app.olauncher.helper.openDialerApp
 import app.olauncher.helper.openSearch
+import app.olauncher.helper.setBlackAndWhite
 import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
@@ -54,9 +61,16 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var prefs: Prefs
     private lateinit var viewModel: MainViewModel
     private lateinit var deviceManager: DevicePolicyManager
+    private lateinit var homeAppViews: List<ImageView>
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    private val homeAppViewIds = listOf(
+        R.id.homeApp1, R.id.homeApp2, R.id.homeApp3, R.id.homeApp4, R.id.homeApp5,
+        R.id.homeApp6, R.id.homeApp7, R.id.homeApp8, R.id.homeApp9, R.id.homeApp10,
+        R.id.homeApp11, R.id.homeApp12, R.id.homeApp13, R.id.homeApp14, R.id.homeApp15,
+    )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -72,10 +86,28 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
         deviceManager = context?.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
 
+        homeAppViews = homeAppViewIds.mapIndexed { index, id ->
+            binding.root.findViewById<ImageView>(id).also { it.tag = (index + 1).toString() }
+        }
         initObservers()
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
         initClickListeners()
+        initHomeAppDragListeners()
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (binding.appDrawerOverlay.isVisible) {
+                        closeAppDrawerOverlay()
+                    } else {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        )
     }
 
     override fun onResume() {
@@ -132,37 +164,37 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     override fun onLongClick(view: View): Boolean {
-        when (view.id) {
-            R.id.homeApp1 -> showAppList(Constants.FLAG_SET_HOME_APP_1, prefs.appName1.isNotEmpty(), true)
-            R.id.homeApp2 -> showAppList(Constants.FLAG_SET_HOME_APP_2, prefs.appName2.isNotEmpty(), true)
-            R.id.homeApp3 -> showAppList(Constants.FLAG_SET_HOME_APP_3, prefs.appName3.isNotEmpty(), true)
-            R.id.homeApp4 -> showAppList(Constants.FLAG_SET_HOME_APP_4, prefs.appName4.isNotEmpty(), true)
-            R.id.homeApp5 -> showAppList(Constants.FLAG_SET_HOME_APP_5, prefs.appName5.isNotEmpty(), true)
-            R.id.homeApp6 -> showAppList(Constants.FLAG_SET_HOME_APP_6, prefs.appName6.isNotEmpty(), true)
-            R.id.homeApp7 -> showAppList(Constants.FLAG_SET_HOME_APP_7, prefs.appName7.isNotEmpty(), true)
-            R.id.homeApp8 -> showAppList(Constants.FLAG_SET_HOME_APP_8, prefs.appName8.isNotEmpty(), true)
-            R.id.clock -> {
+        when {
+            view.id in homeAppViewIds -> {
+                val location = view.tag.toString().toInt()
+                if (location == Constants.HOME_DRAWER_SLOT) {
+                    openAppDrawerOverlay(Constants.FLAG_LAUNCH_APP)
+                } else {
+                    showAppList(location, prefs.getAppName(location).isNotEmpty(), true)
+                }
+            }
+            view.id == R.id.clock -> {
                 showAppList(Constants.FLAG_SET_CLOCK_APP)
                 prefs.clockAppPackage = ""
                 prefs.clockAppClassName = ""
                 prefs.clockAppUser = ""
             }
 
-            R.id.date -> {
+            view.id == R.id.date -> {
                 showAppList(Constants.FLAG_SET_CALENDAR_APP)
                 prefs.calendarAppPackage = ""
                 prefs.calendarAppClassName = ""
                 prefs.calendarAppUser = ""
             }
 
-            R.id.tvScreenTime -> {
+            view.id == R.id.tvScreenTime -> {
                 showAppList(Constants.FLAG_SET_SCREEN_TIME_APP)
                 prefs.screenTimeAppPackage = ""
                 prefs.screenTimeAppClassName = ""
                 prefs.screenTimeAppUser = ""
             }
 
-            R.id.setDefaultLauncher -> {
+            view.id == R.id.setDefaultLauncher -> {
                 prefs.hideSetDefaultLauncher = true
                 binding.setDefaultLauncher.visibility = View.GONE
                 if (viewModel.isOlauncherDefault.value != true) {
@@ -213,14 +245,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun initSwipeTouchListener() {
         val context = requireContext()
         binding.mainLayout.setOnTouchListener(getSwipeGestureListener(context))
-        binding.homeApp1.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp1))
-        binding.homeApp2.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp2))
-        binding.homeApp3.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp3))
-        binding.homeApp4.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp4))
-        binding.homeApp5.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp5))
-        binding.homeApp6.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp6))
-        binding.homeApp7.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp7))
-        binding.homeApp8.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp8))
+        homeAppViews.forEach { appView ->
+            appView.setOnTouchListener(getViewSwipeTouchListener(context, appView))
+        }
     }
 
     private fun initClickListeners() {
@@ -237,36 +264,14 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.tvScreenTime.setOnLongClickListener(this)
 
         // These fire only on d-pad/keyboard events; touch is consumed by ViewSwipeTouchListener
-        binding.homeApp1.setOnClickListener(this)
-        binding.homeApp2.setOnClickListener(this)
-        binding.homeApp3.setOnClickListener(this)
-        binding.homeApp4.setOnClickListener(this)
-        binding.homeApp5.setOnClickListener(this)
-        binding.homeApp6.setOnClickListener(this)
-        binding.homeApp7.setOnClickListener(this)
-        binding.homeApp8.setOnClickListener(this)
-        binding.homeApp1.setOnLongClickListener(this)
-        binding.homeApp2.setOnLongClickListener(this)
-        binding.homeApp3.setOnLongClickListener(this)
-        binding.homeApp4.setOnLongClickListener(this)
-        binding.homeApp5.setOnLongClickListener(this)
-        binding.homeApp6.setOnLongClickListener(this)
-        binding.homeApp7.setOnLongClickListener(this)
-        binding.homeApp8.setOnLongClickListener(this)
+        homeAppViews.forEach { appView ->
+            appView.setOnClickListener(this)
+            appView.setOnLongClickListener(this)
+        }
     }
 
     private fun setHomeAlignment(horizontalGravity: Int = prefs.homeAlignment) {
-        val verticalGravity = if (prefs.homeBottomAlignment) Gravity.BOTTOM else Gravity.CENTER_VERTICAL
-        binding.homeAppsLayout.gravity = horizontalGravity or verticalGravity
         binding.dateTimeLayout.gravity = horizontalGravity
-        binding.homeApp1.gravity = horizontalGravity
-        binding.homeApp2.gravity = horizontalGravity
-        binding.homeApp3.gravity = horizontalGravity
-        binding.homeApp4.gravity = horizontalGravity
-        binding.homeApp5.gravity = horizontalGravity
-        binding.homeApp6.gravity = horizontalGravity
-        binding.homeApp7.gravity = horizontalGravity
-        binding.homeApp8.gravity = horizontalGravity
     }
 
     private fun populateDateTime() {
@@ -322,80 +327,60 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             populateScreenTime()
 
         val homeAppsNum = prefs.homeAppsNum
-        if (homeAppsNum == 0) return
-
-        binding.homeApp1.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp1, prefs.appName1, prefs.appPackage1, prefs.appUser1, prefs.isShortcut1, prefs.shortcutId1)) {
-            prefs.appName1 = ""
-            prefs.appPackage1 = ""
+        binding.homeAppsBottomSheet.isVisible = homeAppsNum > 0
+        if (homeAppsNum == 0) {
+            closeAppDrawerOverlay()
+            return
         }
-        if (homeAppsNum == 1) return
 
-        binding.homeApp2.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp2, prefs.appName2, prefs.appPackage2, prefs.appUser2, prefs.isShortcut2, prefs.shortcutId2)) {
-            prefs.appName2 = ""
-            prefs.appPackage2 = ""
+        // Always show the full 5×3 grid; slot 13 is the app-drawer button.
+        for (location in 1..Constants.MAX_HOME_APPS) {
+            val appView = homeAppViews[location - 1]
+            appView.visibility = View.VISIBLE
+            if (location == Constants.HOME_DRAWER_SLOT) {
+                showDrawerSlotIcon(appView)
+                continue
+            }
+            if (!setHomeAppIcon(
+                    appView,
+                    prefs.getAppName(location),
+                    prefs.getAppPackage(location),
+                    prefs.getAppActivityClassName(location),
+                    prefs.getAppUser(location),
+                    prefs.getIsShortcut(location),
+                    prefs.getShortcutId(location)
+                )
+            ) {
+                prefs.clearHomeApp(location)
+            }
         }
-        if (homeAppsNum == 2) return
-
-        binding.homeApp3.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp3, prefs.appName3, prefs.appPackage3, prefs.appUser3, prefs.isShortcut3, prefs.shortcutId3)) {
-            prefs.appName3 = ""
-            prefs.appPackage3 = ""
-        }
-        if (homeAppsNum == 3) return
-
-        binding.homeApp4.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp4, prefs.appName4, prefs.appPackage4, prefs.appUser4, prefs.isShortcut4, prefs.shortcutId4)) {
-            prefs.appName4 = ""
-            prefs.appPackage4 = ""
-        }
-        if (homeAppsNum == 4) return
-
-        binding.homeApp5.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp5, prefs.appName5, prefs.appPackage5, prefs.appUser5, prefs.isShortcut5, prefs.shortcutId5)) {
-            prefs.appName5 = ""
-            prefs.appPackage5 = ""
-        }
-        if (homeAppsNum == 5) return
-
-        binding.homeApp6.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp6, prefs.appName6, prefs.appPackage6, prefs.appUser6, prefs.isShortcut6, prefs.shortcutId6)) {
-            prefs.appName6 = ""
-            prefs.appPackage6 = ""
-        }
-        if (homeAppsNum == 6) return
-
-        binding.homeApp7.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp7, prefs.appName7, prefs.appPackage7, prefs.appUser7, prefs.isShortcut7, prefs.shortcutId7)) {
-            prefs.appName7 = ""
-            prefs.appPackage7 = ""
-        }
-        if (homeAppsNum == 7) return
-
-        binding.homeApp8.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp8, prefs.appName8, prefs.appPackage8, prefs.appUser8, prefs.isShortcut8, prefs.shortcutId8)) {
-            prefs.appName8 = ""
-            prefs.appPackage8 = ""
-        }
+        binding.homeAppsBottomSheet.post { updateDrawerOverlayPadding() }
     }
 
-    private fun setHomeAppText(
-        textView: TextView,
+    private fun showDrawerSlotIcon(imageView: ImageView) {
+        imageView.setImageResource(R.drawable.ic_apps_drawer)
+        imageView.setBlackAndWhite(false)
+        imageView.imageTintList = android.content.res.ColorStateList.valueOf(
+            requireContext().getColorFromAttr(R.attr.primaryColor)
+        )
+        imageView.contentDescription = getString(R.string.app_drawer)
+    }
+
+    private fun setHomeAppIcon(
+        imageView: ImageView,
         appName: String,
         packageName: String,
+        activityClassName: String?,
         userString: String,
         isShortcut: Boolean,
         shortcutId: String?,
     ): Boolean {
-        // Get user handle for the app/shortcut
         val userHandle = getUserHandleFromString(requireContext(), userString)
+        imageView.contentDescription = appName.ifBlank { getString(R.string.app) }
+        imageView.imageTintList = null
 
-        // If it's a shortcut, verify it still exists
         if (isShortcut) {
             val launcherApps = requireContext().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-
-            // Query for the specific shortcut
             val query = LauncherApps.ShortcutQuery().apply {
                 setPackage(packageName)
                 setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
@@ -403,38 +388,62 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
             try {
                 val shortcuts = launcherApps.getShortcuts(query, userHandle)
-                // Check if our shortcut still exists
                 if (shortcuts?.any { it.id == shortcutId } == true) {
-                    textView.text = appName
+                    val icon = requireContext().getShortcutIconDrawable(
+                        packageName,
+                        shortcutId.orEmpty(),
+                        userHandle
+                    )
+                    if (icon != null) {
+                        imageView.setImageDrawable(icon)
+                        imageView.setBlackAndWhite(true)
+                    } else {
+                        showEmptyHomeAppSlot(imageView)
+                    }
                     return true
                 }
-                textView.text = ""
+                showEmptyHomeAppSlot(imageView)
                 return false
             } catch (e: Exception) {
                 e.printStackTrace()
-                textView.text = ""
+                showEmptyHomeAppSlot(imageView)
                 return false
             }
         }
 
-        // Regular app check
-        if (isPackageInstalled(requireContext(), packageName, userString)) {
-            textView.text = appName
+        if (packageName.isNotBlank() && isPackageInstalled(requireContext(), packageName, userString)) {
+            val icon = requireContext().getAppIconDrawable(
+                packageName,
+                userHandle,
+                activityClassName,
+                prefs.iconPackPackage,
+            )
+            if (icon != null) {
+                imageView.setImageDrawable(icon)
+                imageView.setBlackAndWhite(true)
+            } else {
+                showEmptyHomeAppSlot(imageView)
+            }
             return true
         }
-        textView.text = ""
-        return false
+
+        showEmptyHomeAppSlot(imageView)
+        return packageName.isBlank()
+    }
+
+    private fun showEmptyHomeAppSlot(imageView: ImageView) {
+        imageView.imageTintList = null
+        imageView.setImageResource(R.drawable.ic_home_app_empty)
+        imageView.setBlackAndWhite(false)
+        imageView.contentDescription = getString(R.string.app)
     }
 
     private fun hideHomeApps() {
-        binding.homeApp1.visibility = View.GONE
-        binding.homeApp2.visibility = View.GONE
-        binding.homeApp3.visibility = View.GONE
-        binding.homeApp4.visibility = View.GONE
-        binding.homeApp5.visibility = View.GONE
-        binding.homeApp6.visibility = View.GONE
-        binding.homeApp7.visibility = View.GONE
-        binding.homeApp8.visibility = View.GONE
+        homeAppViews.forEach {
+            it.visibility = View.GONE
+            it.setImageDrawable(null)
+        }
+        binding.homeAppsBottomSheet.isVisible = false
     }
 
     private fun launchAppOrShortcut(
@@ -498,6 +507,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun homeAppClicked(location: Int) {
+        if (location == Constants.HOME_DRAWER_SLOT) {
+            openAppDrawerOverlay(Constants.FLAG_LAUNCH_APP)
+            return
+        }
         launchAppOrShortcut(
             appName = prefs.getAppName(location),
             packageName = prefs.getAppPackage(location),
@@ -535,6 +548,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun showAppList(flag: Int, rename: Boolean = false, includeHiddenApps: Boolean = false) {
+        // Clock/calendar/screen-time and settings still use the nav drawer.
+        // Home grid launch + home-slot assignment use the overlay so the dock stays droppable.
+        if (flag == Constants.FLAG_LAUNCH_APP || flag in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_15) {
+            openAppDrawerOverlay(flag, rename, includeHiddenApps)
+            return
+        }
         viewModel.getAppList(includeHiddenApps)
         try {
             findNavController().navigate(
@@ -553,6 +572,77 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 )
             )
             e.printStackTrace()
+        }
+    }
+
+    fun openAppDrawerOverlay(
+        flag: Int = Constants.FLAG_LAUNCH_APP,
+        rename: Boolean = false,
+        includeHiddenApps: Boolean = false,
+    ) {
+        viewModel.getAppList(includeHiddenApps)
+        val drawer = AppDrawerFragment().apply {
+            arguments = bundleOf(
+                Constants.Key.FLAG to flag,
+                Constants.Key.RENAME to rename,
+                Constants.Key.OVERLAY to true,
+            )
+        }
+        childFragmentManager.beginTransaction()
+            .replace(R.id.appDrawerOverlay, drawer, "home_app_drawer")
+            .commitAllowingStateLoss()
+        binding.appDrawerOverlay.isVisible = true
+        updateDrawerOverlayPadding()
+    }
+
+    fun closeAppDrawerOverlay() {
+        val existing = childFragmentManager.findFragmentByTag("home_app_drawer")
+        if (existing != null) {
+            childFragmentManager.beginTransaction()
+                .remove(existing)
+                .commitAllowingStateLoss()
+        }
+        binding.appDrawerOverlay.isVisible = false
+    }
+
+    private fun updateDrawerOverlayPadding() {
+        val sheetHeight = binding.homeAppsBottomSheet.height
+        if (sheetHeight > 0) {
+            binding.appDrawerOverlay.setPadding(0, 0, 0, sheetHeight)
+        }
+    }
+
+    private fun initHomeAppDragListeners() {
+        homeAppViews.forEach { appView ->
+            appView.setOnDragListener { view, event ->
+                val location = view.tag?.toString()?.toIntOrNull() ?: return@setOnDragListener false
+                if (location == Constants.HOME_DRAWER_SLOT) return@setOnDragListener false
+                when (event.action) {
+                    DragEvent.ACTION_DRAG_STARTED ->
+                        event.clipDescription?.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) == true
+
+                    DragEvent.ACTION_DRAG_ENTERED -> {
+                        view.alpha = 0.45f
+                        true
+                    }
+
+                    DragEvent.ACTION_DRAG_EXITED, DragEvent.ACTION_DRAG_ENDED -> {
+                        view.alpha = 1f
+                        true
+                    }
+
+                    DragEvent.ACTION_DROP -> {
+                        view.alpha = 1f
+                        val appModel = event.localState as? AppModel ?: return@setOnDragListener false
+                        if (appModel is AppModel.PrivateSpaceHeader) return@setOnDragListener false
+                        viewModel.selectedApp(appModel, location)
+                        closeAppDrawerOverlay()
+                        true
+                    }
+
+                    else -> true
+                }
+            }
         }
     }
 

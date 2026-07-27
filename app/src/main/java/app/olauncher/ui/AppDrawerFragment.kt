@@ -46,6 +46,7 @@ class AppDrawerFragment : BaseFragment() {
 
     private var flag = Constants.FLAG_LAUNCH_APP
     private var canRename = false
+    private var isOverlay = false
     private var currentAppList: List<AppModel>? = null
     private var currentPrivateSpaceApps: List<AppModel>? = null
     private var currentPrivateSpaceLocked: Boolean = true
@@ -70,6 +71,7 @@ class AppDrawerFragment : BaseFragment() {
         arguments?.let {
             flag = it.getInt(Constants.Key.FLAG, Constants.FLAG_LAUNCH_APP)
             canRename = it.getBoolean(Constants.Key.RENAME, false)
+            isOverlay = it.getBoolean(Constants.Key.OVERLAY, false)
         }
 
         initViews()
@@ -82,7 +84,9 @@ class AppDrawerFragment : BaseFragment() {
     private fun initViews() {
         if (flag == Constants.FLAG_HIDDEN_APPS)
             binding.search.queryHint = getString(R.string.hidden_apps)
-        else if (flag in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_CALENDAR_APP)
+        else if (flag in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_15 ||
+            flag in Constants.FLAG_SET_SWIPE_LEFT_APP..Constants.FLAG_SET_SCREEN_TIME_APP
+        )
             binding.search.queryHint = "Please select an app"
         try {
             searchTextView = binding.search.findViewById(R.id.search_src_text)
@@ -152,10 +156,7 @@ class AppDrawerFragment : BaseFragment() {
             prefs.appLabelAlignment,
             appClickListener = { appModel ->
                 viewModel.selectedApp(appModel, flag)
-                if (flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
-                    findNavController().popBackStack(R.id.mainFragment, false)
-                else
-                    findNavController().popBackStack()
+                dismissDrawer(popToHome = flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
             },
             appInfoListener = {
                 openAppInfo(
@@ -163,7 +164,7 @@ class AppDrawerFragment : BaseFragment() {
                     it.user,
                     it.appPackage
                 )
-                findNavController().popBackStack(R.id.mainFragment, false)
+                dismissDrawer(popToHome = true)
             },
             appDeleteListener = { appModel ->
                 when (appModel) {
@@ -208,12 +209,14 @@ class AppDrawerFragment : BaseFragment() {
 
                 prefs.hiddenApps = newSet
                 if (newSet.isEmpty())
-                    findNavController().popBackStack()
+                    dismissDrawer()
                 if (prefs.firstHide) {
                     binding.search.hideKeyboard()
                     prefs.firstHide = false
                     viewModel.showDialog.postValue(Constants.Dialog.HIDDEN)
-                    findNavController().navigate(R.id.action_appListFragment_to_settingsFragment2)
+                    if (!isOverlay) {
+                        findNavController().navigate(R.id.action_appListFragment_to_settingsFragment2)
+                    }
                 }
                 viewModel.getAppList()
                 viewModel.getHiddenApps()
@@ -232,8 +235,10 @@ class AppDrawerFragment : BaseFragment() {
             },
             privateSpaceSettingsListener = {
                 viewModel.openPrivateSpaceSettings()
-                findNavController().popBackStack(R.id.mainFragment, false)
-            }
+                dismissDrawer(popToHome = true)
+            },
+            enableDragToHome = isOverlay,
+            iconPackPackage = prefs.iconPackPackage,
         )
 
         linearLayoutManager = object : LinearLayoutManager(requireContext()) {
@@ -315,16 +320,10 @@ class AppDrawerFragment : BaseFragment() {
             }
 
             when (flag) {
-                Constants.FLAG_SET_HOME_APP_1 -> prefs.appName1 = name
-                Constants.FLAG_SET_HOME_APP_2 -> prefs.appName2 = name
-                Constants.FLAG_SET_HOME_APP_3 -> prefs.appName3 = name
-                Constants.FLAG_SET_HOME_APP_4 -> prefs.appName4 = name
-                Constants.FLAG_SET_HOME_APP_5 -> prefs.appName5 = name
-                Constants.FLAG_SET_HOME_APP_6 -> prefs.appName6 = name
-                Constants.FLAG_SET_HOME_APP_7 -> prefs.appName7 = name
-                Constants.FLAG_SET_HOME_APP_8 -> prefs.appName8 = name
+                in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_15 ->
+                    prefs.setAppName(flag, name)
             }
-            findNavController().popBackStack()
+            dismissDrawer()
         }
     }
 
@@ -356,9 +355,22 @@ class AppDrawerFragment : BaseFragment() {
     }
 
     private fun checkMessageAndExit() {
-        findNavController().popBackStack()
+        dismissDrawer(popToHome = true)
         if (flag == Constants.FLAG_LAUNCH_APP)
             viewModel.checkForMessages.call()
+    }
+
+    private fun dismissDrawer(popToHome: Boolean = false) {
+        if (isOverlay) {
+            (parentFragment as? HomeFragment)?.closeAppDrawerOverlay()
+            return
+        }
+        try {
+            if (popToHome) findNavController().popBackStack(R.id.mainFragment, false)
+            else findNavController().popBackStack()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onStart() {

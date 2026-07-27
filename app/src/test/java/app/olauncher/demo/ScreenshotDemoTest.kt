@@ -4,15 +4,19 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
 import android.os.Looper
 import android.os.Process
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
 import app.olauncher.data.AppModel
+import app.olauncher.helper.setBlackAndWhite
 import app.olauncher.ui.AppDrawerAdapter
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,7 +47,7 @@ class ScreenshotDemoTest {
     private val outDir = File("build/demo-screenshots").apply { mkdirs() }
 
     @Test
-    fun homeScreen() = capture("01_home_screen", R.layout.fragment_home) { _, root ->
+    fun homeScreen() = capture("01_home_screen", R.layout.fragment_home) { activity, root ->
         root.findViewById<View>(R.id.dateTimeLayout).visibility = View.VISIBLE
         root.findViewById<android.widget.TextView>(R.id.date).text = "Sun, 26 Jul"
         // TextClock does not tick under Robolectric; show a static time via the clock TextView.
@@ -54,15 +58,35 @@ class ScreenshotDemoTest {
             R.id.homeApp2 to "Messages",
             R.id.homeApp3 to "Chrome",
             R.id.homeApp4 to "Camera",
-            R.id.homeApp5 to "Calendar",
-            R.id.homeApp6 to "Settings",
+            R.id.homeApp5 to "Photos",
+            R.id.homeApp6 to "Calendar",
+            R.id.homeApp7 to "Maps",
+            R.id.homeApp8 to "Gmail",
+            R.id.homeApp9 to "Files",
+            R.id.homeApp10 to "Clock",
+            R.id.homeApp11 to "Settings",
+            R.id.homeApp12 to "YouTube",
+            R.id.homeApp13 to "Play Store",
+            R.id.homeApp14 to "Contacts",
+            R.id.homeApp15 to "Calculator",
         )
-        homeApps.forEach { (id, label) ->
-            root.findViewById<android.widget.TextView>(id).apply {
-                text = label
+        val density = activity.resources.displayMetrics.density
+        val iconPx = (48 * density).toInt()
+        homeApps.forEachIndexed { index, (id, label) ->
+            root.findViewById<ImageView>(id).apply {
+                if (index + 1 == app.olauncher.data.Constants.HOME_DRAWER_SLOT) {
+                    setImageDrawable(BitmapDrawable(resources, demoDrawerIconBitmap(iconPx)))
+                    setBlackAndWhite(false)
+                    contentDescription = "App drawer"
+                } else {
+                    setImageDrawable(BitmapDrawable(resources, demoIconBitmap(label, iconPx, index)))
+                    setBlackAndWhite(true)
+                    contentDescription = label
+                }
                 visibility = View.VISIBLE
             }
         }
+        root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
     }
 
     @Test
@@ -94,6 +118,46 @@ class ScreenshotDemoTest {
             ) as AppModel
         }.toMutableList()
         adapter.setAppList(apps)
+    }
+
+    /** Synthetic colored icon; ImageView B&W filter turns it monochrome for demos. */
+    private fun demoIconBitmap(label: String, size: Int, seed: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            // Distinct hues so grayscale still shows varied tones after desaturation.
+            color = Color.HSVToColor(floatArrayOf((seed * 37f) % 360f, 0.55f, 0.75f))
+        }
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textAlign = Paint.Align.CENTER
+            textSize = size * 0.42f
+            isFakeBoldText = true
+        }
+        val cx = size / 2f
+        val cy = size / 2f
+        canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), size * 0.22f, size * 0.22f, fill)
+        val letter = label.first().uppercaseChar().toString()
+        val textY = cy - (textPaint.descent() + textPaint.ascent()) / 2f
+        canvas.drawText(letter, cx, textY, textPaint)
+        return bitmap
+    }
+
+    private fun demoDrawerIconBitmap(size: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
+        val pad = size * 0.18f
+        val gap = size * 0.1f
+        val cell = (size - pad * 2 - gap) / 2f
+        for (row in 0..1) {
+            for (col in 0..1) {
+                val left = pad + col * (cell + gap)
+                val top = pad + row * (cell + gap)
+                canvas.drawRoundRect(left, top, left + cell, top + cell, cell * 0.2f, cell * 0.2f, paint)
+            }
+        }
+        return bitmap
     }
 
     private fun capture(name: String, layoutRes: Int, populate: (Activity, View) -> Unit) {

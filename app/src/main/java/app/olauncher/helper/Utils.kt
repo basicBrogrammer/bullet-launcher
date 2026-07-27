@@ -14,9 +14,12 @@ import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Point
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.UserHandle
@@ -31,6 +34,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.LinearInterpolator
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
@@ -668,5 +672,50 @@ fun Context.deletePinnedShortcut(packageName: String, shortcutIdToDelete: String
     } catch (e: Exception) {
         // Handle other potential exceptions (like RemoteException wrapped)
         Log.e("ShortcutHelper", "Failed to modify pinned shortcuts for $packageName", e)
+    }
+}
+
+private val blackAndWhiteColorFilter by lazy {
+    ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+}
+
+/** Apply a black-and-white (grayscale) color filter to an ImageView. */
+fun ImageView.setBlackAndWhite(enabled: Boolean = true) {
+    colorFilter = if (enabled) blackAndWhiteColorFilter else null
+}
+
+fun Context.getAppIconDrawable(
+    packageName: String,
+    userHandle: UserHandle,
+    activityClassName: String? = null,
+    iconPackPackage: String? = Prefs(this).iconPackPackage,
+): Drawable? {
+    if (packageName.isBlank()) return null
+    return IconPackHelper.loadAppIcon(
+        context = this,
+        packageName = packageName,
+        activityClassName = activityClassName,
+        userHandle = userHandle,
+        iconPackPackage = iconPackPackage,
+    )
+}
+
+fun Context.getShortcutIconDrawable(
+    packageName: String,
+    shortcutId: String,
+    userHandle: UserHandle,
+): Drawable? {
+    if (packageName.isBlank() || shortcutId.isBlank()) return null
+    return try {
+        val launcher = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val query = LauncherApps.ShortcutQuery().apply {
+            setPackage(packageName)
+            setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
+        }
+        val shortcut = launcher.getShortcuts(query, userHandle)?.find { it.id == shortcutId } ?: return null
+        launcher.getShortcutIconDrawable(shortcut, resources.displayMetrics.densityDpi)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

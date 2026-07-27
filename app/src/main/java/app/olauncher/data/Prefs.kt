@@ -42,6 +42,7 @@ class Prefs(context: Context) {
     private val SCREEN_TIME_LAST_UPDATED = "SCREEN_TIME_LAST_UPDATED"
     private val LAUNCHER_RESTART_TIMESTAMP = "LAUNCHER_RECREATE_TIMESTAMP"
     private val SHOWN_ON_DAY_OF_YEAR = "SHOWN_ON_DAY_OF_YEAR"
+    private val ICON_PACK_PACKAGE = "ICON_PACK_PACKAGE"
     // Home button for recents feature disabled
     // private val HOME_BUTTON_SHOW_RECENTS = "HOME_BUTTON_SHOW_RECENTS"
 
@@ -161,8 +162,8 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(DAILY_WALLPAPER_URL, value).apply() }
 
     var homeAppsNum: Int
-        get() = prefs.getInt(HOME_APPS_NUM, 4)
-        set(value) = prefs.edit { putInt(HOME_APPS_NUM, value).apply() }
+        get() = prefs.getInt(HOME_APPS_NUM, 4).coerceIn(0, Constants.MAX_HOME_APPS)
+        set(value) = prefs.edit { putInt(HOME_APPS_NUM, value.coerceIn(0, Constants.MAX_HOME_APPS)).apply() }
 
     var homeAlignment: Int
         get() = prefs.getInt(HOME_ALIGNMENT, Gravity.START)
@@ -219,6 +220,11 @@ class Prefs(context: Context) {
     var shownOnDayOfYear: Int
         get() = prefs.getInt(SHOWN_ON_DAY_OF_YEAR, 0)
         set(value) = prefs.edit { putInt(SHOWN_ON_DAY_OF_YEAR, value).apply() }
+
+    /** Empty string = system default icons. Otherwise an installed icon-pack package name. */
+    var iconPackPackage: String
+        get() = prefs.getString(ICON_PACK_PACKAGE, "").orEmpty()
+        set(value) = prefs.edit { putString(ICON_PACK_PACKAGE, value).apply() }
 
     // Home button for recents feature disabled
     // var homeButtonShowRecents: Boolean
@@ -533,105 +539,53 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(IS_SHORTCUT_SWIPE_RIGHT, false)
         set(value) = prefs.edit { putBoolean(IS_SHORTCUT_SWIPE_RIGHT, value) }
 
-    fun getAppName(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_NAME_1, "").toString()
-            2 -> prefs.getString(APP_NAME_2, "").toString()
-            3 -> prefs.getString(APP_NAME_3, "").toString()
-            4 -> prefs.getString(APP_NAME_4, "").toString()
-            5 -> prefs.getString(APP_NAME_5, "").toString()
-            6 -> prefs.getString(APP_NAME_6, "").toString()
-            7 -> prefs.getString(APP_NAME_7, "").toString()
-            8 -> prefs.getString(APP_NAME_8, "").toString()
-            else -> ""
-        }
-    }
+    fun getAppName(location: Int): String =
+        prefs.getString("APP_NAME_$location", "").orEmpty()
 
-    fun getAppPackage(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_PACKAGE_1, "").toString()
-            2 -> prefs.getString(APP_PACKAGE_2, "").toString()
-            3 -> prefs.getString(APP_PACKAGE_3, "").toString()
-            4 -> prefs.getString(APP_PACKAGE_4, "").toString()
-            5 -> prefs.getString(APP_PACKAGE_5, "").toString()
-            6 -> prefs.getString(APP_PACKAGE_6, "").toString()
-            7 -> prefs.getString(APP_PACKAGE_7, "").toString()
-            8 -> prefs.getString(APP_PACKAGE_8, "").toString()
-            else -> ""
-        }
-    }
+    fun setAppName(location: Int, name: String) =
+        prefs.edit { putString("APP_NAME_$location", name).apply() }
 
-    fun getAppActivityClassName(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_1, "").toString()
-            2 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_2, "").toString()
-            3 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_3, "").toString()
-            4 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_4, "").toString()
-            5 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_5, "").toString()
-            6 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_6, "").toString()
-            7 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_7, "").toString()
-            8 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_8, "").toString()
-            else -> ""
-        }
-    }
+    fun getAppPackage(location: Int): String =
+        prefs.getString("APP_PACKAGE_$location", "").orEmpty()
 
-    fun getAppUser(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_USER_1, "").toString()
-            2 -> prefs.getString(APP_USER_2, "").toString()
-            3 -> prefs.getString(APP_USER_3, "").toString()
-            4 -> prefs.getString(APP_USER_4, "").toString()
-            5 -> prefs.getString(APP_USER_5, "").toString()
-            6 -> prefs.getString(APP_USER_6, "").toString()
-            7 -> prefs.getString(APP_USER_7, "").toString()
-            8 -> prefs.getString(APP_USER_8, "").toString()
-            else -> ""
-        }
-    }
+    fun setAppPackage(location: Int, packageName: String) =
+        prefs.edit { putString("APP_PACKAGE_$location", packageName).apply() }
 
-    fun getShortcutId(location: Int): String {
-        return when (location) {
-            1 -> shortcutId1
-            2 -> shortcutId2
-            3 -> shortcutId3
-            4 -> shortcutId4
-            5 -> shortcutId5
-            6 -> shortcutId6
-            7 -> shortcutId7
-            8 -> shortcutId8
-            else -> ""
-        }
-    }
+    fun getAppActivityClassName(location: Int): String =
+        prefs.getString("APP_ACTIVITY_CLASS_NAME_$location", "").orEmpty()
 
-    fun getIsShortcut(location: Int): Boolean {
-        return when (location) {
-            1 -> isShortcut1
-            2 -> isShortcut2
-            3 -> isShortcut3
-            4 -> isShortcut4
-            5 -> isShortcut5
-            6 -> isShortcut6
-            7 -> isShortcut7
-            8 -> isShortcut8
-            else -> false
-        }
-    }
+    fun setAppActivityClassName(location: Int, activityClassName: String?) =
+        prefs.edit { putString("APP_ACTIVITY_CLASS_NAME_$location", activityClassName.orEmpty()).apply() }
 
-    fun setAppActivityClassName(location: Int, activityClassName: String) {
-        when (location) {
-            1 -> appActivityClassName1 = activityClassName
-            2 -> appActivityClassName2 = activityClassName
-            3 -> appActivityClassName3 = activityClassName
-            4 -> appActivityClassName4 = activityClassName
-            5 -> appActivityClassName5 = activityClassName
-            6 -> appActivityClassName6 = activityClassName
-            7 -> appActivityClassName7 = activityClassName
-            8 -> appActivityClassName8 = activityClassName
-        }
+    fun getAppUser(location: Int): String =
+        prefs.getString("APP_USER_$location", "").orEmpty()
+
+    fun setAppUser(location: Int, user: String) =
+        prefs.edit { putString("APP_USER_$location", user).apply() }
+
+    fun getShortcutId(location: Int): String =
+        prefs.getString("SHORTCUT_ID_$location", "").orEmpty()
+
+    fun setShortcutId(location: Int, shortcutId: String) =
+        prefs.edit { putString("SHORTCUT_ID_$location", shortcutId).apply() }
+
+    fun getIsShortcut(location: Int): Boolean =
+        prefs.getBoolean("IS_SHORTCUT_$location", false)
+
+    fun setIsShortcut(location: Int, isShortcut: Boolean) =
+        prefs.edit { putBoolean("IS_SHORTCUT_$location", isShortcut).apply() }
+
+    fun clearHomeApp(location: Int) {
+        setAppName(location, "")
+        setAppPackage(location, "")
+        setAppActivityClassName(location, "")
+        setAppUser(location, "")
+        setIsShortcut(location, false)
+        setShortcutId(location, "")
     }
 
     fun updateAppActivityClassName(packageName: String, activityClassName: String) {
-        for (i in 1..8) {
+        for (i in 1..Constants.MAX_HOME_APPS) {
             if (getAppPackage(i) == packageName) setAppActivityClassName(i, activityClassName)
         }
         if (clockAppPackage == packageName) clockAppClassName = activityClassName

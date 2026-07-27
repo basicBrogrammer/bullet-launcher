@@ -5,6 +5,7 @@ object Constants {
     object Key {
         const val FLAG = "flag"
         const val RENAME = "rename"
+        const val OVERLAY = "overlay"
     }
 
     object Dialog {
@@ -68,6 +69,12 @@ object Constants {
     const val FLAG_LAUNCH_APP = 100
     const val FLAG_HIDDEN_APPS = 101
 
+    const val MAX_HOME_APPS = 15
+    const val HOME_APPS_COLUMNS = 5
+    const val HOME_APPS_ROWS = 3
+    /** Bottom-row center cell in the 5×3 home grid — opens the app drawer. */
+    const val HOME_DRAWER_SLOT = 13
+
     const val FLAG_SET_HOME_APP_1 = 1
     const val FLAG_SET_HOME_APP_2 = 2
     const val FLAG_SET_HOME_APP_3 = 3
@@ -76,12 +83,19 @@ object Constants {
     const val FLAG_SET_HOME_APP_6 = 6
     const val FLAG_SET_HOME_APP_7 = 7
     const val FLAG_SET_HOME_APP_8 = 8
+    const val FLAG_SET_HOME_APP_9 = 9
+    const val FLAG_SET_HOME_APP_10 = 10
+    const val FLAG_SET_HOME_APP_11 = 11
+    const val FLAG_SET_HOME_APP_12 = 12
+    const val FLAG_SET_HOME_APP_13 = 13
+    const val FLAG_SET_HOME_APP_14 = 14
+    const val FLAG_SET_HOME_APP_15 = 15
 
-    const val FLAG_SET_SWIPE_LEFT_APP = 11
-    const val FLAG_SET_SWIPE_RIGHT_APP = 12
-    const val FLAG_SET_CLOCK_APP = 13
-    const val FLAG_SET_CALENDAR_APP = 14
-    const val FLAG_SET_SCREEN_TIME_APP = 15
+    const val FLAG_SET_SWIPE_LEFT_APP = 111
+    const val FLAG_SET_SWIPE_RIGHT_APP = 112
+    const val FLAG_SET_CLOCK_APP = 113
+    const val FLAG_SET_CALENDAR_APP = 114
+    const val FLAG_SET_SCREEN_TIME_APP = 115
 
     const val REQUEST_CODE_ENABLE_ADMIN = 666
     const val REQUEST_CODE_LAUNCHER_SELECTOR = 678
