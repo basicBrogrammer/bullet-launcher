@@ -1,5 +1,6 @@
 package app.olauncher.ui
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.content.ClipDescription
 import android.content.Context
@@ -19,6 +20,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
@@ -38,6 +40,7 @@ import app.olauncher.data.JournalPages
 import app.olauncher.data.JournalStore
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
+import app.olauncher.helper.CalendarSyncHelper
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
@@ -69,9 +72,27 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var homeAppViews: List<ImageView>
     private lateinit var journalStore: JournalStore
     private var journalPagerAdapter: JournalPagerAdapter? = null
+    /** Journal entry awaiting calendar sync after the permission prompt. */
+    private var pendingCalendarSyncEntryId: String? = null
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    private val calendarPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.READ_CALENDAR] == true &&
+            grants[Manifest.permission.WRITE_CALENDAR] == true
+        val entryId = pendingCalendarSyncEntryId
+        pendingCalendarSyncEntryId = null
+        if (entryId == null) return@registerForActivityResult
+        val entry = journalStore.getById(entryId) ?: return@registerForActivityResult
+        if (granted) {
+            syncEntryToCalendar(entry)
+        } else {
+            requireContext().showToast(R.string.event_calendar_permission_needed)
+        }
+    }
 
     private val homeAppViewIds = listOf(
         R.id.homeApp1, R.id.homeApp2, R.id.homeApp3, R.id.homeApp4, R.id.homeApp5,
@@ -317,8 +338,35 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
                 else -> JournalLog.DAILY to journalStore.todayKey()
             }
-            journalStore.add(text, type, log, dateKey, priority)
+            val entry = journalStore.add(text, type, log, dateKey, priority)
             refreshJournal()
+            if (type == BulletType.EVENT) {
+                requestCalendarSync(entry)
+            }
+        }
+    }
+
+    private fun requestCalendarSync(entry: JournalEntry) {
+        if (CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
+            syncEntryToCalendar(entry)
+            return
+        }
+        pendingCalendarSyncEntryId = entry.id
+        calendarPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.READ_CALENDAR,
+                Manifest.permission.WRITE_CALENDAR,
+            )
+        )
+    }
+
+    private fun syncEntryToCalendar(entry: JournalEntry) {
+        val eventId = CalendarSyncHelper.insertEvent(requireContext(), entry)
+        if (eventId != null) {
+            journalStore.setCalendarEventId(entry.id, eventId)
+            requireContext().showToast(R.string.event_synced_to_calendar)
+        } else {
+            requireContext().showToast(R.string.event_calendar_sync_failed)
         }
     }
 
@@ -330,6 +378,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun deleteJournalEntry(entry: JournalEntry) {
+        if (entry.type == BulletType.EVENT) {
+            CalendarSyncHelper.deleteEvent(requireContext(), entry.calendarEventId)
+        }
         journalStore.delete(entry.id)
         requireContext().showToast(R.string.entry_deleted)
         refreshJournal()

@@ -207,6 +207,10 @@
     <string name="journal_monthly_empty">No entries this month yet</string>
     <string name="journal_section_empty">—</string>
     <string name="entry_deleted">Entry deleted</string>
+    <string name="event_synced_to_calendar">Event added to calendar</string>
+    <string name="event_calendar_permission_needed">Allow calendar access to sync events</string>
+    <string name="event_calendar_sync_failed">Could not sync event to calendar</string>
+    <string name="event_calendar_sync_hint">Syncs to your phone / Google Calendar</string>
     <string name="add_bullet">Add bullet</string>
     <string name="index_daily_row">01    Daily Log</string>
     <string name="index_monthly_row">02    Monthly Log</string>

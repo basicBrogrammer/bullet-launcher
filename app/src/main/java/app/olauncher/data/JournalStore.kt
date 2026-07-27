@@ -167,6 +167,18 @@ class JournalStore(context: Context) {
         saveAll(getAll().filterNot { it.id == id })
     }
 
+    fun setCalendarEventId(id: String, calendarEventId: Long?): JournalEntry? {
+        val all = getAll().toMutableList()
+        val index = all.indexOfFirst { it.id == id }
+        if (index < 0) return null
+        val updated = all[index].copy(calendarEventId = calendarEventId)
+        all[index] = updated
+        saveAll(all)
+        return updated
+    }
+
+    fun getById(id: String): JournalEntry? = getAll().find { it.id == id }
+
     fun ensureSampleData() {
         if (prefs.getBoolean(KEY_SEEDED, false)) return
         if (getAll().isNotEmpty()) {
@@ -212,6 +224,9 @@ class JournalStore(context: Context) {
             put("priority", entry.priority)
             put("completed", entry.completed)
             put("createdAt", entry.createdAt)
+            if (entry.calendarEventId != null) {
+                put("calendarEventId", entry.calendarEventId)
+            }
         }
 
     private fun parseEntry(obj: JSONObject): JournalEntry? {
@@ -225,6 +240,8 @@ class JournalStore(context: Context) {
                 priority = obj.optBoolean("priority", false),
                 completed = obj.optBoolean("completed", false),
                 createdAt = obj.optLong("createdAt", 0L),
+                calendarEventId = obj.optLong("calendarEventId", -1L)
+                    .takeIf { it > 0L },
             )
         } catch (_: Exception) {
             null

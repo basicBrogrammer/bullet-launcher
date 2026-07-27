@@ -11,6 +11,7 @@ import android.os.Process
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -141,9 +142,20 @@ class ScreenshotDemoTest {
 
     @Test
     fun addBullet() = capture("05_add_bullet", R.layout.dialog_add_bullet) { _, root ->
-        root.findViewById<TextView>(R.id.typeTask).alpha = 1f
-        root.findViewById<TextView>(R.id.typeEvent).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun addBulletEventSelected() = capture("05b_add_bullet_event", R.layout.dialog_add_bullet) { _, root ->
+        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
+        root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
+        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
         root.setBackgroundColor(Color.WHITE)
     }
 
