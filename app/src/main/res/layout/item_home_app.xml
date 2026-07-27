@@ -10,9 +10,9 @@
     android:focusable="true"
     android:gravity="center_horizontal"
     android:hint="@string/app"
-    android:maxLines="2"
-    android:paddingHorizontal="4dp"
-    android:paddingVertical="10dp"
+    android:maxLines="1"
+    android:paddingHorizontal="2dp"
+    android:paddingVertical="12dp"
     android:visibility="gone"
     tools:text="Messages"
     tools:visibility="visible" />
