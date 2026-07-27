@@ -14,7 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.FrameLayout
-import android.widget.TextView
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
@@ -33,7 +33,9 @@ import app.olauncher.databinding.FragmentHomeBinding
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
+import app.olauncher.helper.getAppIconDrawable
 import app.olauncher.helper.getChangedAppTheme
+import app.olauncher.helper.getShortcutIconDrawable
 import app.olauncher.helper.getUserHandleFromString
 import app.olauncher.helper.isPackageInstalled
 import app.olauncher.helper.openAlarmApp
@@ -41,6 +43,7 @@ import app.olauncher.helper.openCalendar
 import app.olauncher.helper.openCameraApp
 import app.olauncher.helper.openDialerApp
 import app.olauncher.helper.openSearch
+import app.olauncher.helper.setBlackAndWhite
 import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
@@ -54,7 +57,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var prefs: Prefs
     private lateinit var viewModel: MainViewModel
     private lateinit var deviceManager: DevicePolicyManager
-    private lateinit var homeAppViews: List<TextView>
+    private lateinit var homeAppViews: List<ImageView>
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -80,7 +83,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         deviceManager = context?.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
 
         homeAppViews = homeAppViewIds.mapIndexed { index, id ->
-            binding.root.findViewById<TextView>(id).also { it.tag = (index + 1).toString() }
+            binding.root.findViewById<ImageView>(id).also { it.tag = (index + 1).toString() }
         }
         initObservers()
         setHomeAlignment(prefs.homeAlignment)
@@ -246,8 +249,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun setHomeAlignment(horizontalGravity: Int = prefs.homeAlignment) {
         binding.dateTimeLayout.gravity = horizontalGravity
-        // Grid cells stay centered; alignment applies to the clock/date block.
-        homeAppViews.forEach { it.gravity = Gravity.CENTER_HORIZONTAL }
     }
 
     private fun populateDateTime() {
@@ -309,10 +310,11 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         for (location in 1..homeAppsNum) {
             val appView = homeAppViews[location - 1]
             appView.visibility = View.VISIBLE
-            if (!setHomeAppText(
+            if (!setHomeAppIcon(
                     appView,
                     prefs.getAppName(location),
                     prefs.getAppPackage(location),
+                    prefs.getAppActivityClassName(location),
                     prefs.getAppUser(location),
                     prefs.getIsShortcut(location),
                     prefs.getShortcutId(location)
@@ -323,22 +325,20 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         }
     }
 
-    private fun setHomeAppText(
-        textView: TextView,
+    private fun setHomeAppIcon(
+        imageView: ImageView,
         appName: String,
         packageName: String,
+        activityClassName: String?,
         userString: String,
         isShortcut: Boolean,
         shortcutId: String?,
     ): Boolean {
-        // Get user handle for the app/shortcut
         val userHandle = getUserHandleFromString(requireContext(), userString)
+        imageView.contentDescription = appName.ifBlank { getString(R.string.app) }
 
-        // If it's a shortcut, verify it still exists
         if (isShortcut) {
             val launcherApps = requireContext().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-
-            // Query for the specific shortcut
             val query = LauncherApps.ShortcutQuery().apply {
                 setPackage(packageName)
                 setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
@@ -346,31 +346,56 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
             try {
                 val shortcuts = launcherApps.getShortcuts(query, userHandle)
-                // Check if our shortcut still exists
                 if (shortcuts?.any { it.id == shortcutId } == true) {
-                    textView.text = appName
+                    val icon = requireContext().getShortcutIconDrawable(
+                        packageName,
+                        shortcutId.orEmpty(),
+                        userHandle
+                    )
+                    if (icon != null) {
+                        imageView.setImageDrawable(icon)
+                        imageView.setBlackAndWhite(true)
+                    } else {
+                        imageView.setImageResource(R.drawable.ic_home_app_empty)
+                        imageView.setBlackAndWhite(false)
+                    }
                     return true
                 }
-                textView.text = ""
+                showEmptyHomeAppSlot(imageView)
                 return false
             } catch (e: Exception) {
                 e.printStackTrace()
-                textView.text = ""
+                showEmptyHomeAppSlot(imageView)
                 return false
             }
         }
 
-        // Regular app check
-        if (isPackageInstalled(requireContext(), packageName, userString)) {
-            textView.text = appName
+        if (packageName.isNotBlank() && isPackageInstalled(requireContext(), packageName, userString)) {
+            val icon = requireContext().getAppIconDrawable(packageName, userHandle, activityClassName)
+            if (icon != null) {
+                imageView.setImageDrawable(icon)
+                imageView.setBlackAndWhite(true)
+            } else {
+                showEmptyHomeAppSlot(imageView)
+            }
             return true
         }
-        textView.text = ""
-        return false
+
+        showEmptyHomeAppSlot(imageView)
+        return packageName.isBlank()
+    }
+
+    private fun showEmptyHomeAppSlot(imageView: ImageView) {
+        imageView.setImageResource(R.drawable.ic_home_app_empty)
+        imageView.setBlackAndWhite(false)
+        imageView.contentDescription = getString(R.string.app)
     }
 
     private fun hideHomeApps() {
-        homeAppViews.forEach { it.visibility = View.GONE }
+        homeAppViews.forEach {
+            it.visibility = View.GONE
+            it.setImageDrawable(null)
+        }
         binding.homeAppsBottomSheet.isVisible = false
     }
 
