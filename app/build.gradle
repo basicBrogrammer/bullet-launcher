@@ -41,6 +41,11 @@ android {
         viewBinding = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
     namespace 'app.olauncher'
 }
 
@@ -64,4 +69,31 @@ dependencies {
     //Material dependency
     implementation libs.material
 
+    // Test-only: JVM screenshot rendering for PR demos (no emulator/device needed).
+    // These are testImplementation only and do NOT affect the app APK.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.test:core-ktx:1.6.1'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}
+
+// Renders Olauncher screens to PNGs in app/build/demo-screenshots/ using
+// Robolectric native graphics (no emulator/device needed). Used to attach
+// visual demos of UI changes to PRs. Reuses the fully-configured unit test
+// task, scoped to the demo package, and forces a re-render each run.
+def renderingDemos = gradle.startParameter.taskNames.any { it.endsWith("renderDemoScreens") }
+if (renderingDemos) {
+    afterEvaluate {
+        tasks.named("testDebugUnitTest").configure {
+            filter { includeTestsMatching("app.olauncher.demo.*") }
+            outputs.upToDateWhen { false }
+        }
+    }
+}
+tasks.register("renderDemoScreens") {
+    group = "verification"
+    description = "Render Olauncher screens to PNGs (build/demo-screenshots) for PR demos."
+    dependsOn("testDebugUnitTest")
+    doLast {
+        println("Demo screenshots written to: ${layout.buildDirectory.get()}/demo-screenshots")
+    }
 }
