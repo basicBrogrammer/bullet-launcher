@@ -12,12 +12,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
 import app.olauncher.data.AppModel
+import app.olauncher.data.BulletType
+import app.olauncher.data.JournalEntry
+import app.olauncher.data.JournalLog
 import app.olauncher.helper.setBlackAndWhite
 import app.olauncher.ui.AppDrawerAdapter
+import app.olauncher.ui.JournalBulletAdapter
+import app.olauncher.ui.JournalListItem
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -47,11 +53,146 @@ class ScreenshotDemoTest {
     private val outDir = File("build/demo-screenshots").apply { mkdirs() }
 
     @Test
-    fun homeScreen() = capture("01_home_screen", R.layout.fragment_home) { activity, root ->
-        root.findViewById<View>(R.id.dateTimeLayout).visibility = View.VISIBLE
-        root.findViewById<android.widget.TextView>(R.id.date).text = "Sun, 26 Jul"
-        // TextClock does not tick under Robolectric; show a static time via the clock TextView.
-        root.findViewById<android.widget.TextView>(R.id.clock).text = "2:34"
+    fun dailyLog() = capture("01_daily_log", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
+        root.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                demoEntry("Morning pages", BulletType.TASK, priority = true),
+                demoEntry("Team standup", BulletType.EVENT),
+                demoEntry("Idea: simplify home gestures", BulletType.NOTE),
+                demoEntry("Review monthly goals", BulletType.TASK),
+            ).map { JournalListItem.Bullet(it) }
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+    }
+
+    @Test
+    fun monthlyLog() = capture("02_monthly_log", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).setText(R.string.monthly_log)
+        root.findViewById<TextView>(R.id.logSubtitle).text = "July 2026"
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                JournalListItem.Section(
+                    "26 · Sun",
+                    listOf(
+                        demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
+                        demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26"),
+                    )
+                ),
+                JournalListItem.Section(
+                    "27 · Mon",
+                    listOf(
+                        demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
+                        demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27"),
+                    )
+                ),
+            )
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+    }
+
+    @Test
+    fun futureLog() = capture("03_future_log", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).setText(R.string.future_log)
+        root.findViewById<TextView>(R.id.logSubtitle).setText(R.string.future_log_subtitle)
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                JournalListItem.Section(
+                    "JUL 2026",
+                    listOf(demoEntry("Finish redesign", BulletType.TASK, log = JournalLog.FUTURE, day = "2026-07"))
+                ),
+                JournalListItem.Section(
+                    "AUG 2026",
+                    listOf(
+                        demoEntry("Vacation planning", BulletType.TASK, priority = true, log = JournalLog.FUTURE, day = "2026-08"),
+                        demoEntry("Conference", BulletType.EVENT, log = JournalLog.FUTURE, day = "2026-08"),
+                    )
+                ),
+                JournalListItem.Section(
+                    "SEP 2026",
+                    listOf(demoEntry("Ship v7", BulletType.TASK, log = JournalLog.FUTURE, day = "2026-09"))
+                ),
+            )
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+    }
+
+    @Test
+    fun index() = capture("04_index", R.layout.dialog_index) { _, root ->
+        root.findViewById<TextView>(R.id.indexDaily).setText(R.string.index_daily_row)
+        root.findViewById<TextView>(R.id.indexMonthly).setText(R.string.index_monthly_row)
+        root.findViewById<TextView>(R.id.indexFuture).setText(R.string.index_future_row)
+        // Give the dialog a readable backdrop for the screenshot.
+        (root as? View)?.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun addBullet() = capture("05_add_bullet", R.layout.dialog_add_bullet) { _, root ->
+        root.findViewById<TextView>(R.id.typeTask).alpha = 1f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun homeCollapsed() = capture("06_home_collapsed", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = false)
+    }
+
+    @Test
+    fun homeExpanded() = capture("06b_home_expanded", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = true)
+    }
+
+    private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean) {
+        root.findViewById<View>(R.id.dateTimeLayout).visibility = View.GONE
+        root.findViewById<View>(R.id.journalPager).visibility = View.GONE
+
+        val journal = LayoutInflater.from(activity).inflate(R.layout.page_journal_log, null)
+        val host = root as ViewGroup
+        host.addView(
+            journal,
+            2,
+            FrameMatch(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        val bottomPad = if (expanded) 260 else 140
+        journal.setPadding(
+            0,
+            (48 * activity.resources.displayMetrics.density).toInt(),
+            0,
+            (bottomPad * activity.resources.displayMetrics.density).toInt(),
+        )
+        journal.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
+        journal.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
+        val recycler = journal.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(activity)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                demoEntry("Morning pages", BulletType.TASK, priority = true),
+                demoEntry("Team standup", BulletType.EVENT),
+                demoEntry("Idea: simplify home gestures", BulletType.NOTE),
+                demoEntry("Review monthly goals", BulletType.TASK),
+            ).map { JournalListItem.Bullet(it) }
+        )
+        journal.findViewById<View>(R.id.emptyHint).visibility = View.GONE
 
         val homeApps = listOf(
             R.id.homeApp1 to "Phone",
@@ -72,6 +213,7 @@ class ScreenshotDemoTest {
         )
         val density = activity.resources.displayMetrics.density
         val iconPx = (48 * density).toInt()
+        val visibleCount = if (expanded) homeApps.size else 5
         homeApps.forEachIndexed { index, (id, label) ->
             root.findViewById<ImageView>(id).apply {
                 if (index + 1 == app.olauncher.data.Constants.HOME_DRAWER_SLOT) {
@@ -83,14 +225,19 @@ class ScreenshotDemoTest {
                     setBlackAndWhite(true)
                     contentDescription = label
                 }
-                visibility = View.VISIBLE
+                visibility = if (index < visibleCount) View.VISIBLE else View.GONE
             }
         }
         root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
+        val fab = root.findViewById<View>(R.id.addBulletButton)
+        val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
+        fabParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
+        fab.layoutParams = fabParams
     }
 
     @Test
-    fun appDrawer() = capture("02_app_drawer", R.layout.fragment_app_drawer) { activity, root ->
+    fun appDrawer() = capture("07_app_drawer", R.layout.fragment_app_drawer) { activity, root ->
         val recycler = root.findViewById<RecyclerView>(R.id.recyclerView)
         recycler.layoutManager = LinearLayoutManager(activity)
         val adapter = AppDrawerAdapter(
@@ -119,6 +266,23 @@ class ScreenshotDemoTest {
         }.toMutableList()
         adapter.setAppList(apps)
     }
+
+    private fun demoEntry(
+        text: String,
+        type: BulletType,
+        priority: Boolean = false,
+        completed: Boolean = false,
+        log: JournalLog = JournalLog.DAILY,
+        day: String = "2026-07-27",
+    ) = JournalEntry(
+        id = text,
+        text = text,
+        type = type,
+        log = log,
+        dateKey = day,
+        priority = priority,
+        completed = completed,
+    )
 
     /** Synthetic colored icon; ImageView B&W filter turns it monochrome for demos. */
     private fun demoIconBitmap(label: String, size: Int, seed: Int): Bitmap {
@@ -159,6 +323,8 @@ class ScreenshotDemoTest {
         }
         return bitmap
     }
+
+    private class FrameMatch(width: Int, height: Int) : ViewGroup.LayoutParams(width, height)
 
     private fun capture(name: String, layoutRes: Int, populate: (Activity, View) -> Unit) {
         val controller = Robolectric.buildActivity(DemoHostActivity::class.java).setup()

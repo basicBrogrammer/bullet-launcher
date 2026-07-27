@@ -63,6 +63,9 @@ dependencies {
     // Navigation
     implementation libs.navigation.fragment.ktx
 
+    // Horizontal journal pages (Monthly | Daily | Future)
+    implementation libs.viewpager2
+
     // Work Manager
     implementation libs.work.runtime.ktx
 
