@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        style="@style/TextSmallBold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:letterSpacing="0.12"
+        android:paddingBottom="4dp"
+        android:text="@string/index"
+        android:textAllCaps="true" />
+
+    <TextView
+        style="@style/TextLarge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingBottom="16dp"
+        android:text="@string/index_subtitle" />
+
+    <TextView
+        android:id="@+id/indexDaily"
+        style="@style/TextMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingVertical="12dp"
+        tools:text="01  Daily Log" />
+
+    <TextView
+        android:id="@+id/indexMonthly"
+        style="@style/TextMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingVertical="12dp"
+        tools:text="02  Monthly Log" />
+
+    <TextView
+        android:id="@+id/indexFuture"
+        style="@style/TextMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingVertical="12dp"
+        tools:text="03  Future Log" />
+
+    <TextView
+        style="@style/TextSmallLight"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingTop="16dp"
+        android:text="@string/rapid_logging_legend" />
+</LinearLayout>

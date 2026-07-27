@@ -30,7 +30,12 @@ import androidx.navigation.fragment.findNavController
 import app.olauncher.MainViewModel
 import app.olauncher.R
 import app.olauncher.data.AppModel
+import app.olauncher.data.BulletType
 import app.olauncher.data.Constants
+import app.olauncher.data.JournalEntry
+import app.olauncher.data.JournalLog
+import app.olauncher.data.JournalPages
+import app.olauncher.data.JournalStore
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
 import app.olauncher.helper.appUsagePermissionGranted
@@ -62,6 +67,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var viewModel: MainViewModel
     private lateinit var deviceManager: DevicePolicyManager
     private lateinit var homeAppViews: List<ImageView>
+    private lateinit var journalStore: JournalStore
+    private var journalPagerAdapter: JournalPagerAdapter? = null
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -89,6 +96,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         homeAppViews = homeAppViewIds.mapIndexed { index, id ->
             binding.root.findViewById<ImageView>(id).also { it.tag = (index + 1).toString() }
         }
+        journalStore = JournalStore(requireContext())
+        journalStore.ensureSampleData()
+        initJournalPager()
         initObservers()
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
@@ -100,6 +110,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 override fun handleOnBackPressed() {
                     if (binding.appDrawerOverlay.isVisible) {
                         closeAppDrawerOverlay()
+                    } else if (binding.journalPager.currentItem != JournalPages.DAILY) {
+                        binding.journalPager.setCurrentItem(JournalPages.DAILY, true)
                     } else {
                         isEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -113,6 +125,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     override fun onResume() {
         super.onResume()
         populateHomeScreen(false)
+        refreshJournal()
         viewModel.isOlauncherDefault()
         if (prefs.showStatusBar) showStatusBar()
         else hideStatusBar()
@@ -127,6 +140,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             R.id.date -> openCalendarApp()
             R.id.setDefaultLauncher -> viewModel.resetLauncherLiveData.call()
             R.id.tvScreenTime -> openScreenTimeDigitalWellbeing()
+            R.id.addBulletButton -> showAddBulletDialog()
 
             else -> {
                 try { // Launch app
@@ -262,12 +276,62 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.setDefaultLauncher.setOnLongClickListener(this)
         binding.tvScreenTime.setOnClickListener(this)
         binding.tvScreenTime.setOnLongClickListener(this)
+        binding.addBulletButton.setOnClickListener(this)
 
         // These fire only on d-pad/keyboard events; touch is consumed by ViewSwipeTouchListener
         homeAppViews.forEach { appView ->
             appView.setOnClickListener(this)
             appView.setOnLongClickListener(this)
         }
+    }
+
+    private fun initJournalPager() {
+        val adapter = JournalPagerAdapter(
+            store = journalStore,
+            onIndex = { showIndexDialog() },
+            onToggle = { entry -> toggleJournalEntry(entry) },
+            onLongPress = { entry -> deleteJournalEntry(entry) },
+        )
+        journalPagerAdapter = adapter
+        binding.journalPager.adapter = adapter
+        binding.journalPager.setCurrentItem(JournalPages.DAILY, false)
+        binding.journalPager.offscreenPageLimit = 1
+    }
+
+    private fun refreshJournal() {
+        journalPagerAdapter?.refresh()
+    }
+
+    private fun showIndexDialog() {
+        IndexDialog.show(requireContext()) { page ->
+            binding.journalPager.setCurrentItem(page, true)
+        }
+    }
+
+    private fun showAddBulletDialog() {
+        AddBulletDialog.show(requireContext()) { text, type, priority ->
+            val page = binding.journalPager.currentItem
+            val (log, dateKey) = when (page) {
+                JournalPages.MONTHLY -> JournalLog.MONTHLY to journalStore.todayKey()
+                JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
+                else -> JournalLog.DAILY to journalStore.todayKey()
+            }
+            journalStore.add(text, type, log, dateKey, priority)
+            refreshJournal()
+        }
+    }
+
+    private fun toggleJournalEntry(entry: JournalEntry) {
+        if (entry.type == BulletType.TASK) {
+            journalStore.toggleCompleted(entry.id)
+            refreshJournal()
+        }
+    }
+
+    private fun deleteJournalEntry(entry: JournalEntry) {
+        journalStore.delete(entry.id)
+        requireContext().showToast(R.string.entry_deleted)
+        refreshJournal()
     }
 
     private fun setHomeAlignment(horizontalGravity: Int = prefs.homeAlignment) {
@@ -355,6 +419,22 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             }
         }
         binding.homeAppsBottomSheet.post { updateDrawerOverlayPadding() }
+        updateAddButtonMargin()
+    }
+
+    private fun updateAddButtonMargin() {
+        val params = binding.addBulletButton.layoutParams as FrameLayout.LayoutParams
+        params.bottomMargin = if (binding.homeAppsBottomSheet.isVisible) 200.dpToPx() else 48.dpToPx()
+        binding.addBulletButton.layoutParams = params
+        val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
+        pagerParams.bottomMargin = if (binding.homeAppsBottomSheet.isVisible) 220.dpToPx() else 72.dpToPx()
+        val topMargin = if (binding.dateTimeLayout.isVisible) {
+            if (binding.clock.isVisible) 140.dpToPx() else 100.dpToPx()
+        } else {
+            48.dpToPx()
+        }
+        pagerParams.topMargin = topMargin
+        binding.journalPager.layoutParams = pagerParams
     }
 
     private fun showDrawerSlotIcon(imageView: ImageView) {
@@ -444,6 +524,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             it.setImageDrawable(null)
         }
         binding.homeAppsBottomSheet.isVisible = false
+        updateAddButtonMargin()
     }
 
     private fun launchAppOrShortcut(
@@ -738,15 +819,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun getSwipeGestureListener(context: Context): View.OnTouchListener {
         return object : OnSwipeTouchListener(context) {
-            override fun onSwipeLeft() {
-                super.onSwipeLeft()
-                openSwipeLeftApp()
-            }
-
-            override fun onSwipeRight() {
-                super.onSwipeRight()
-                openSwipeRightApp()
-            }
+            // Horizontal swipes navigate journal pages via ViewPager2.
+            // Left/right app shortcuts remain available from dock icon swipes.
 
             override fun onSwipeUp() {
                 super.onSwipeUp()

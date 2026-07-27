@@ -53,7 +53,7 @@
     <string name="follow">Follow</string>
     <string name="email">Email</string>
     <string name="donate">Donate</string>
-    <string name="swipe_up_for_apps">1. Swipe up for all apps\n2. Long press anywhere for settings</string>
+    <string name="swipe_up_for_apps">1. Swipe between logs · tap Index for contents\n2. Swipe up for apps · long press for settings</string>
     <string name="apps_on_home_screen">Apps on home screen</string>
     <string name="icon_pack">Icon pack</string>
     <string name="app_drawer">App drawer</string>
@@ -184,4 +184,31 @@
     <string name="cheers">Cheers!</string>
     <string name="notification_bar">Notification bar</string>
     <string name="private_space">Private space</string>
+
+    <!-- Bullet journal -->
+    <string name="index">Index</string>
+    <string name="index_subtitle">Table of contents</string>
+    <string name="daily_log">Daily Log</string>
+    <string name="monthly_log">Monthly Log</string>
+    <string name="future_log">Future Log</string>
+    <string name="future_log_subtitle">Looking ahead</string>
+    <string name="add_entry">New entry</string>
+    <string name="entry_hint">What\'s on your mind?</string>
+    <string name="rapid_logging">Rapid logging</string>
+    <string name="rapid_logging_legend">• task   ○ event   – note   * priority</string>
+    <string name="bullet_task">• Task</string>
+    <string name="bullet_event">○ Event</string>
+    <string name="bullet_note">– Note</string>
+    <string name="priority_off">* Priority: off</string>
+    <string name="priority_on">* Priority: on</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="journal_empty_hint">Tap + to add a task, event, or note</string>
+    <string name="journal_monthly_empty">No entries this month yet</string>
+    <string name="journal_section_empty">—</string>
+    <string name="entry_deleted">Entry deleted</string>
+    <string name="add_bullet">Add bullet</string>
+    <string name="index_daily_row">01    Daily Log</string>
+    <string name="index_monthly_row">02    Monthly Log</string>
+    <string name="index_future_row">03    Future Log</string>
 </resources>

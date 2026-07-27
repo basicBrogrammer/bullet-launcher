@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/logTitle"
+            style="@style/TextSmallBold"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="serif"
+            android:letterSpacing="0.12"
+            android:text="@string/daily_log"
+            android:textAllCaps="true" />
+
+        <TextView
+            android:id="@+id/indexButton"
+            style="@style/TextSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="serif"
+            android:letterSpacing="0.08"
+            android:padding="8dp"
+            android:text="@string/index"
+            android:textAllCaps="true" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/logSubtitle"
+        style="@style/TextLarge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingBottom="12dp"
+        tools:text="Mon, 27 Jul" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/bulletList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingBottom="16dp"
+        tools:listitem="@layout/item_journal_bullet" />
+
+    <TextView
+        android:id="@+id/emptyHint"
+        style="@style/TextSmallLight"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingVertical="24dp"
+        android:text="@string/journal_empty_hint"
+        android:visibility="gone"
+        tools:visibility="visible" />
+</LinearLayout>
