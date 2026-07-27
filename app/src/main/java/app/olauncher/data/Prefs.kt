@@ -16,6 +16,7 @@ class Prefs(context: Context) {
     private val USER_STATE = "USER_STATE"
     private val LOCK_MODE = "LOCK_MODE"
     private val HOME_APPS_NUM = "HOME_APPS_NUM"
+    private val HOME_APPS_SHEET_EXPANDED = "HOME_APPS_SHEET_EXPANDED"
     private val AUTO_SHOW_KEYBOARD = "AUTO_SHOW_KEYBOARD"
     private val KEYBOARD_MESSAGE = "KEYBOARD_MESSAGE"
     private val DAILY_WALLPAPER = "DAILY_WALLPAPER"
@@ -164,6 +165,11 @@ class Prefs(context: Context) {
     var homeAppsNum: Int
         get() = prefs.getInt(HOME_APPS_NUM, 4).coerceIn(0, Constants.MAX_HOME_APPS)
         set(value) = prefs.edit { putInt(HOME_APPS_NUM, value.coerceIn(0, Constants.MAX_HOME_APPS)).apply() }
+
+    /** Whether the home apps bottom sheet shows 3 rows (true) or 1 row (false). */
+    var homeAppsSheetExpanded: Boolean
+        get() = prefs.getBoolean(HOME_APPS_SHEET_EXPANDED, false)
+        set(value) = prefs.edit { putBoolean(HOME_APPS_SHEET_EXPANDED, value).apply() }
 
     var homeAlignment: Int
         get() = prefs.getInt(HOME_ALIGNMENT, Gravity.START)

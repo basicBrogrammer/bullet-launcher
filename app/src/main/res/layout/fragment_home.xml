@@ -70,7 +70,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="48dp"
-        android:layout_marginBottom="260dp"
+        android:layout_marginBottom="140dp"
         android:clipToPadding="false" />
 
     <!-- App drawer overlay (keeps bottom sheet visible for drag-and-drop) -->
@@ -90,19 +90,27 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
+        android:animateLayoutChanges="true"
         android:background="@drawable/bg_home_apps_bottom_sheet"
         android:elevation="16dp"
         android:orientation="vertical"
         android:paddingBottom="32dp">
 
-        <View
-            android:id="@+id/homeAppsSheetHandle"
-            android:layout_width="36dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/bg_bottom_sheet_handle" />
+        <FrameLayout
+            android:id="@+id/homeAppsSheetHandleArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/expand_apps_sheet"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp">
+
+            <View
+                android:id="@+id/homeAppsSheetHandle"
+                android:layout_width="36dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_bottom_sheet_handle" />
+        </FrameLayout>
 
         <GridLayout
             android:id="@+id/homeAppsLayout"
@@ -244,7 +252,7 @@
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="240dp"
+        android:layout_marginBottom="120dp"
         android:background="@drawable/bg_fab_add"
         android:contentDescription="@string/add_bullet"
         android:elevation="20dp"
@@ -260,7 +268,7 @@
         android:layout_gravity="bottom"
         android:layout_marginStart="24dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="260dp"
+        android:layout_marginBottom="280dp"
         android:text="@string/swipe_up_for_apps"
         android:visibility="gone"
         tools:visibility="visible" />

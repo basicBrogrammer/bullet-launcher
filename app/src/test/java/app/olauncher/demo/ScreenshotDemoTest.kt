@@ -148,12 +148,19 @@ class ScreenshotDemoTest {
     }
 
     @Test
-    fun homeWithJournal() = capture("06_home_daily", R.layout.fragment_home) { activity, root ->
+    fun homeCollapsed() = capture("06_home_collapsed", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = false)
+    }
+
+    @Test
+    fun homeExpanded() = capture("06b_home_expanded", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = true)
+    }
+
+    private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean) {
         root.findViewById<View>(R.id.dateTimeLayout).visibility = View.GONE
         root.findViewById<View>(R.id.journalPager).visibility = View.GONE
 
-        // Compose journal page inline for a static home demo (ViewPager2 pages
-        // are not inflated until attached to a pager adapter at runtime).
         val journal = LayoutInflater.from(activity).inflate(R.layout.page_journal_log, null)
         val host = root as ViewGroup
         host.addView(
@@ -162,11 +169,15 @@ class ScreenshotDemoTest {
             FrameMatch(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
-            ).also {
-                // Approximate the pager inset above the dock.
-            }
+            ),
         )
-        journal.setPadding(0, (48 * activity.resources.displayMetrics.density).toInt(), 0, (260 * activity.resources.displayMetrics.density).toInt())
+        val bottomPad = if (expanded) 260 else 140
+        journal.setPadding(
+            0,
+            (48 * activity.resources.displayMetrics.density).toInt(),
+            0,
+            (bottomPad * activity.resources.displayMetrics.density).toInt(),
+        )
         journal.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
         journal.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
         val recycler = journal.findViewById<RecyclerView>(R.id.bulletList)
@@ -202,6 +213,7 @@ class ScreenshotDemoTest {
         )
         val density = activity.resources.displayMetrics.density
         val iconPx = (48 * density).toInt()
+        val visibleCount = if (expanded) homeApps.size else 5
         homeApps.forEachIndexed { index, (id, label) ->
             root.findViewById<ImageView>(id).apply {
                 if (index + 1 == app.olauncher.data.Constants.HOME_DRAWER_SLOT) {
@@ -213,11 +225,15 @@ class ScreenshotDemoTest {
                     setBlackAndWhite(true)
                     contentDescription = label
                 }
-                visibility = View.VISIBLE
+                visibility = if (index < visibleCount) View.VISIBLE else View.GONE
             }
         }
         root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
         root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
+        val fab = root.findViewById<View>(R.id.addBulletButton)
+        val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
+        fabParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
+        fab.layoutParams = fabParams
     }
 
     @Test

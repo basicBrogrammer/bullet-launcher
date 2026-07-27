@@ -211,4 +211,6 @@
     <string name="index_daily_row">01    Daily Log</string>
     <string name="index_monthly_row">02    Monthly Log</string>
     <string name="index_future_row">03    Future Log</string>
+    <string name="expand_apps_sheet">Show more apps</string>
+    <string name="collapse_apps_sheet">Show fewer apps</string>
 </resources>

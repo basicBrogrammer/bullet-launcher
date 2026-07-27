@@ -72,6 +72,8 @@ object Constants {
     const val MAX_HOME_APPS = 15
     const val HOME_APPS_COLUMNS = 5
     const val HOME_APPS_ROWS = 3
+    /** Icons shown when the home apps sheet is collapsed to a single row. */
+    const val HOME_APPS_COLLAPSED_COUNT = HOME_APPS_COLUMNS
     /** Bottom-row center cell in the 5×3 home grid — opens the app drawer. */
     const val HOME_DRAWER_SLOT = 13
 

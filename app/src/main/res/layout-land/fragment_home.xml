@@ -93,19 +93,27 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_marginHorizontal="48dp"
+        android:animateLayoutChanges="true"
         android:background="@drawable/bg_home_apps_bottom_sheet"
         android:elevation="16dp"
         android:orientation="vertical"
         android:paddingBottom="24dp">
 
-        <View
-            android:id="@+id/homeAppsSheetHandle"
-            android:layout_width="36dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/bg_bottom_sheet_handle" />
+        <FrameLayout
+            android:id="@+id/homeAppsSheetHandleArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/expand_apps_sheet"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp">
+
+            <View
+                android:id="@+id/homeAppsSheetHandle"
+                android:layout_width="36dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_bottom_sheet_handle" />
+        </FrameLayout>
 
         <GridLayout
             android:id="@+id/homeAppsLayout"
