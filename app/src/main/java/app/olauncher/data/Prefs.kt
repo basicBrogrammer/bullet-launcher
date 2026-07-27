@@ -94,6 +94,7 @@ class Prefs(context: Context) {
     private val CALENDAR_APP_PACKAGE = "CALENDAR_APP_PACKAGE"
     private val CALENDAR_APP_USER = "CALENDAR_APP_USER"
     private val CALENDAR_APP_CLASS_NAME = "CALENDAR_APP_CLASS_NAME"
+    private val PREFERRED_CALENDAR_ID = "PREFERRED_CALENDAR_ID"
     private val SCREEN_TIME_APP_PACKAGE = "SCREEN_TIME_APP_PACKAGE"
     private val SCREEN_TIME_APP_USER = "SCREEN_TIME_APP_USER"
     private val SCREEN_TIME_APP_CLASS_NAME = "SCREEN_TIME_APP_CLASS_NAME"
@@ -452,6 +453,11 @@ class Prefs(context: Context) {
     var calendarAppClassName: String?
         get() = prefs.getString(CALENDAR_APP_CLASS_NAME, "").toString()
         set(value) = prefs.edit { putString(CALENDAR_APP_CLASS_NAME, value).apply() }
+
+    /** Last calendar the user picked when adding a journal Event. */
+    var preferredCalendarId: Long
+        get() = prefs.getLong(PREFERRED_CALENDAR_ID, -1L)
+        set(value) = prefs.edit { putLong(PREFERRED_CALENDAR_ID, value).apply() }
 
     var screenTimeAppPackage: String
         get() = prefs.getString(SCREEN_TIME_APP_PACKAGE, "").toString()

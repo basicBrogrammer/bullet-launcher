@@ -137,6 +137,9 @@ class JournalStore(context: Context) {
         log: JournalLog,
         dateKey: String,
         priority: Boolean = false,
+        calendarEventId: Long? = null,
+        calendarId: Long? = null,
+        fromCalendar: Boolean = false,
     ): JournalEntry {
         val entry = JournalEntry(
             id = UUID.randomUUID().toString(),
@@ -145,6 +148,9 @@ class JournalStore(context: Context) {
             log = log,
             dateKey = dateKey,
             priority = priority,
+            calendarEventId = calendarEventId,
+            calendarId = calendarId,
+            fromCalendar = fromCalendar,
         )
         val updated = getAll().toMutableList().apply { add(entry) }
         saveAll(updated)
@@ -167,11 +173,41 @@ class JournalStore(context: Context) {
         saveAll(getAll().filterNot { it.id == id })
     }
 
-    fun setCalendarEventId(id: String, calendarEventId: Long?): JournalEntry? {
+    fun setCalendarLink(
+        id: String,
+        calendarEventId: Long?,
+        calendarId: Long?,
+        fromCalendar: Boolean = false,
+    ): JournalEntry? {
         val all = getAll().toMutableList()
         val index = all.indexOfFirst { it.id == id }
         if (index < 0) return null
-        val updated = all[index].copy(calendarEventId = calendarEventId)
+        val updated = all[index].copy(
+            calendarEventId = calendarEventId,
+            calendarId = calendarId,
+            fromCalendar = fromCalendar,
+        )
+        all[index] = updated
+        saveAll(all)
+        return updated
+    }
+
+    fun updateSyncedEvent(
+        id: String,
+        text: String,
+        log: JournalLog,
+        dateKey: String,
+        calendarId: Long?,
+    ): JournalEntry? {
+        val all = getAll().toMutableList()
+        val index = all.indexOfFirst { it.id == id }
+        if (index < 0) return null
+        val updated = all[index].copy(
+            text = text,
+            log = log,
+            dateKey = dateKey,
+            calendarId = calendarId ?: all[index].calendarId,
+        )
         all[index] = updated
         saveAll(all)
         return updated
@@ -227,6 +263,10 @@ class JournalStore(context: Context) {
             if (entry.calendarEventId != null) {
                 put("calendarEventId", entry.calendarEventId)
             }
+            if (entry.calendarId != null) {
+                put("calendarId", entry.calendarId)
+            }
+            put("fromCalendar", entry.fromCalendar)
         }
 
     private fun parseEntry(obj: JSONObject): JournalEntry? {
@@ -242,6 +282,9 @@ class JournalStore(context: Context) {
                 createdAt = obj.optLong("createdAt", 0L),
                 calendarEventId = obj.optLong("calendarEventId", -1L)
                     .takeIf { it > 0L },
+                calendarId = obj.optLong("calendarId", -1L)
+                    .takeIf { it > 0L },
+                fromCalendar = obj.optBoolean("fromCalendar", false),
             )
         } catch (_: Exception) {
             null

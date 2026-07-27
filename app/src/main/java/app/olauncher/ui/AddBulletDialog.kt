@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
+import android.view.View
 import android.view.Window
 import android.widget.EditText
 import android.widget.TextView
@@ -44,8 +45,7 @@ object AddBulletDialog {
             typeEvent.alpha = if (selectedType == BulletType.EVENT) selectedAlpha else dimAlpha
             typeNote.alpha = if (selectedType == BulletType.NOTE) selectedAlpha else dimAlpha
             calendarSyncHint.visibility =
-                if (selectedType == BulletType.EVENT) android.view.View.VISIBLE
-                else android.view.View.GONE
+                if (selectedType == BulletType.EVENT) View.VISIBLE else View.GONE
         }
 
         fun refreshPriority() {

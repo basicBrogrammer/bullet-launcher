@@ -41,8 +41,12 @@ data class JournalEntry(
     val priority: Boolean = false,
     val completed: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
-    /** CalendarContract.Events row id when this ○ Event is synced to the device calendar. */
+    /** CalendarContract.Events row id when linked to the device calendar. */
     val calendarEventId: Long? = null,
+    /** CalendarContract.Calendars row id this event belongs to. */
+    val calendarId: Long? = null,
+    /** True when this bullet was imported from the device/Google calendar. */
+    val fromCalendar: Boolean = false,
 ) {
     fun displaySymbol(): String {
         val base = when {
