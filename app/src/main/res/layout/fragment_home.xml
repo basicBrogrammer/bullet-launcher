@@ -15,14 +15,6 @@
         android:layout_height="1dp"
         android:contentDescription="@string/lock_layout_description" />
 
-    <!-- Home button for recents feature disabled -->
-    <!-- Placeholder layout for showing recent apps
-    <FrameLayout
-        android:id="@+id/recents"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:contentDescription="@string/recents_layout_description" /> -->
-
     <!-- Clock and calendar-->
     <LinearLayout
         android:id="@+id/dateTimeLayout"
@@ -72,113 +64,158 @@
         tools:text="2h 11m"
         tools:visibility="visible" />
 
-    <!-- Home apps-->
+    <!-- Home apps bottom sheet: 5 columns × 3 rows -->
     <LinearLayout
-        android:id="@+id/homeAppsLayout"
+        android:id="@+id/homeAppsBottomSheet"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center_vertical"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_home_apps_bottom_sheet"
+        android:elevation="8dp"
         android:orientation="vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="112dp"
-        android:paddingBottom="48dp">
+        android:paddingBottom="32dp">
 
-        <TextView
-            android:id="@+id/homeApp1"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
+        <View
+            android:id="@+id/homeAppsSheetHandle"
+            android:layout_width="36dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_bottom_sheet_handle" />
+
+        <GridLayout
+            android:id="@+id/homeAppsLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_1"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            android:alignmentMode="alignBounds"
+            android:columnCount="5"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="8dp"
+            android:rowCount="3"
+            android:useDefaultMargins="false">
 
-        <TextView
-            android:id="@+id/homeApp2"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_2"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp1"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
-        <TextView
-            android:id="@+id/homeApp3"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_3"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp2"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
-        <TextView
-            android:id="@+id/homeApp4"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_4"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp3"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
-        <TextView
-            android:id="@+id/homeApp5"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_5"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp4"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
-        <TextView
-            android:id="@+id/homeApp6"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_6"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp5"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
-        <TextView
-            android:id="@+id/homeApp7"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_7"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp6"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
-        <TextView
-            android:id="@+id/homeApp8"
-            style="@style/TextLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:hint="@string/app"
-            android:paddingVertical="@dimen/home_app_padding_vertical"
-            android:tag="@string/tag_8"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <include
+                android:id="@+id/homeApp7"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
 
+            <include
+                android:id="@+id/homeApp8"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp9"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp10"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp11"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp12"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp13"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp14"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+            <include
+                android:id="@+id/homeApp15"
+                layout="@layout/item_home_app"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal|center_vertical" />
+
+        </GridLayout>
     </LinearLayout>
 
     <TextView
@@ -189,7 +226,7 @@
         android:layout_gravity="bottom"
         android:layout_marginStart="24dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="56dp"
+        android:layout_marginBottom="220dp"
         android:text="@string/swipe_up_for_apps"
         android:visibility="gone"
         tools:visibility="visible" />
@@ -202,7 +239,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="56dp"
+        android:layout_marginBottom="220dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:text="@string/set_as_default_launcher_u"

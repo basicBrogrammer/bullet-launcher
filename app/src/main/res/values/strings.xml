@@ -18,6 +18,13 @@
     <string name="tag_6" translatable="false">6</string>
     <string name="tag_7" translatable="false">7</string>
     <string name="tag_8" translatable="false">8</string>
+    <string name="tag_9" translatable="false">9</string>
+    <string name="tag_10" translatable="false">10</string>
+    <string name="tag_11" translatable="false">11</string>
+    <string name="tag_12" translatable="false">12</string>
+    <string name="tag_13" translatable="false">13</string>
+    <string name="tag_14" translatable="false">14</string>
+    <string name="tag_15" translatable="false">15</string>
     <string name="time_spent_min" translatable="false"><b>%1$sm</b></string>
     <string name="time_spent_hour" translatable="false">%1$sh %2$sm</string>
 
@@ -64,6 +71,13 @@
     <string name="_6">6</string>
     <string name="_7">7</string>
     <string name="_8">8</string>
+    <string name="_9">9</string>
+    <string name="_10">10</string>
+    <string name="_11">11</string>
+    <string name="_12">12</string>
+    <string name="_13">13</string>
+    <string name="_14">14</string>
+    <string name="_15">15</string>
     <string name="app_drawer_tips">Tip: Start typing an app name to auto-launch it</string>
     <string name="okay">Okay</string>
     <string name="cool">Cool!</string>

@@ -54,8 +54,17 @@ class ScreenshotDemoTest {
             R.id.homeApp2 to "Messages",
             R.id.homeApp3 to "Chrome",
             R.id.homeApp4 to "Camera",
-            R.id.homeApp5 to "Calendar",
-            R.id.homeApp6 to "Settings",
+            R.id.homeApp5 to "Photos",
+            R.id.homeApp6 to "Calendar",
+            R.id.homeApp7 to "Maps",
+            R.id.homeApp8 to "Gmail",
+            R.id.homeApp9 to "Files",
+            R.id.homeApp10 to "Clock",
+            R.id.homeApp11 to "Settings",
+            R.id.homeApp12 to "YouTube",
+            R.id.homeApp13 to "Play Store",
+            R.id.homeApp14 to "Contacts",
+            R.id.homeApp15 to "Calculator",
         )
         homeApps.forEach { (id, label) ->
             root.findViewById<android.widget.TextView>(id).apply {
@@ -63,6 +72,7 @@ class ScreenshotDemoTest {
                 visibility = View.VISIBLE
             }
         }
+        root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
     }
 
     @Test
