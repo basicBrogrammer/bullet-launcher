@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
+import android.view.View
 import android.view.Window
 import android.widget.EditText
 import android.widget.TextView
@@ -29,6 +30,7 @@ object AddBulletDialog {
         val typeTask = view.findViewById<TextView>(R.id.typeTask)
         val typeEvent = view.findViewById<TextView>(R.id.typeEvent)
         val typeNote = view.findViewById<TextView>(R.id.typeNote)
+        val calendarSyncHint = view.findViewById<TextView>(R.id.calendarSyncHint)
         val priorityToggle = view.findViewById<TextView>(R.id.priorityToggle)
         val cancel = view.findViewById<TextView>(R.id.cancelButton)
         val save = view.findViewById<TextView>(R.id.saveButton)
@@ -42,6 +44,8 @@ object AddBulletDialog {
             typeTask.alpha = if (selectedType == BulletType.TASK) selectedAlpha else dimAlpha
             typeEvent.alpha = if (selectedType == BulletType.EVENT) selectedAlpha else dimAlpha
             typeNote.alpha = if (selectedType == BulletType.NOTE) selectedAlpha else dimAlpha
+            calendarSyncHint.visibility =
+                if (selectedType == BulletType.EVENT) View.VISIBLE else View.GONE
         }
 
         fun refreshPriority() {

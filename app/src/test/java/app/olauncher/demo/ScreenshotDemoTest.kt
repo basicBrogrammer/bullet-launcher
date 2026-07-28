@@ -11,6 +11,7 @@ import android.os.Process
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -63,7 +64,8 @@ class ScreenshotDemoTest {
         adapter.submit(
             listOf(
                 demoEntry("Morning pages", BulletType.TASK, priority = true),
-                demoEntry("Team standup", BulletType.EVENT),
+                demoEntry("Team standup · 10:00", BulletType.EVENT),
+                demoEntry("Dentist · 15:30", BulletType.EVENT),
                 demoEntry("Idea: simplify home gestures", BulletType.NOTE),
                 demoEntry("Review monthly goals", BulletType.TASK),
             ).map { JournalListItem.Bullet(it) }
@@ -141,9 +143,37 @@ class ScreenshotDemoTest {
 
     @Test
     fun addBullet() = capture("05_add_bullet", R.layout.dialog_add_bullet) { _, root ->
-        root.findViewById<TextView>(R.id.typeTask).alpha = 1f
-        root.findViewById<TextView>(R.id.typeEvent).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun addBulletEventSelected() = capture("05b_add_bullet_event", R.layout.dialog_add_bullet) { _, root ->
+        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
+        root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
+        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun chooseCalendar() = capture("05c_choose_calendar", R.layout.dialog_choose_calendar) { activity, root ->
+        val list = root.findViewById<android.widget.LinearLayout>(R.id.calendarList)
+        listOf(
+            "Personal · you@gmail.com",
+            "Work · you@company.com",
+            "Family · you@gmail.com",
+        ).forEachIndexed { index, label ->
+            val row = LayoutInflater.from(activity)
+                .inflate(R.layout.item_calendar_choice, list, false) as TextView
+            row.text = label
+            row.alpha = if (index == 0) 1f else 0.75f
+            list.addView(row)
+        }
         root.setBackgroundColor(Color.WHITE)
     }
 

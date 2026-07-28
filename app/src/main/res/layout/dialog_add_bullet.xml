@@ -82,6 +82,17 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/calendarSyncHint"
+        style="@style/TextSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:paddingBottom="4dp"
+        android:text="@string/event_calendar_sync_hint"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <TextView
         android:id="@+id/priorityToggle"
         style="@style/TextMedium"
         android:layout_width="match_parent"

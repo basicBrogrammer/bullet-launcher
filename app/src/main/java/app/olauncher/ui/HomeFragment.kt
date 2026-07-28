@@ -1,5 +1,6 @@
 package app.olauncher.ui
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.content.ClipDescription
 import android.content.Context
@@ -19,6 +20,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
@@ -38,6 +40,7 @@ import app.olauncher.data.JournalPages
 import app.olauncher.data.JournalStore
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
+import app.olauncher.helper.CalendarSyncHelper
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
@@ -69,9 +72,41 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var homeAppViews: List<ImageView>
     private lateinit var journalStore: JournalStore
     private var journalPagerAdapter: JournalPagerAdapter? = null
+    /** Draft Event waiting for calendar permission / picker before it is saved. */
+    private var pendingEventDraft: PendingEventDraft? = null
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    private data class PendingEventDraft(
+        val text: String,
+        val priority: Boolean,
+        val log: JournalLog,
+        val dateKey: String,
+    )
+
+    private val calendarPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.READ_CALENDAR] == true &&
+            grants[Manifest.permission.WRITE_CALENDAR] == true
+        val draft = pendingEventDraft
+        if (!granted) {
+            pendingEventDraft = null
+            // Still save locally so the bullet isn't lost; just skip calendar sync.
+            if (draft != null) {
+                journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+                refreshJournal()
+            }
+            requireContext().showToast(R.string.event_calendar_permission_needed)
+            return@registerForActivityResult
+        }
+        pullCalendarEventsIntoJournal()
+        if (draft != null) {
+            pendingEventDraft = null
+            showCalendarPickerAndSave(draft)
+        }
+    }
 
     private val homeAppViewIds = listOf(
         R.id.homeApp1, R.id.homeApp2, R.id.homeApp3, R.id.homeApp4, R.id.homeApp5,
@@ -126,6 +161,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     override fun onResume() {
         super.onResume()
         populateHomeScreen(false)
+        pullCalendarEventsIntoJournal()
         refreshJournal()
         viewModel.isOlauncherDefault()
         if (prefs.showStatusBar) showStatusBar()
@@ -317,9 +353,84 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
                 else -> JournalLog.DAILY to journalStore.todayKey()
             }
-            journalStore.add(text, type, log, dateKey, priority)
-            refreshJournal()
+            if (type == BulletType.EVENT) {
+                beginEventSave(text, priority, log, dateKey)
+            } else {
+                journalStore.add(text, type, log, dateKey, priority)
+                refreshJournal()
+            }
         }
+    }
+
+    private fun beginEventSave(
+        text: String,
+        priority: Boolean,
+        log: JournalLog,
+        dateKey: String,
+    ) {
+        val draft = PendingEventDraft(text, priority, log, dateKey)
+        if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
+            pendingEventDraft = draft
+            calendarPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_CALENDAR,
+                    Manifest.permission.WRITE_CALENDAR,
+                )
+            )
+            return
+        }
+        showCalendarPickerAndSave(draft)
+    }
+
+    private fun showCalendarPickerAndSave(draft: PendingEventDraft) {
+        val calendars = CalendarSyncHelper.listWritableCalendars(requireContext())
+        if (calendars.isEmpty()) {
+            journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+            refreshJournal()
+            requireContext().showToast(R.string.event_calendar_none)
+            return
+        }
+        CalendarPickerDialog.show(
+            context = requireContext(),
+            calendars = calendars,
+            preferredId = prefs.preferredCalendarId,
+            onPick = { calendar ->
+                prefs.preferredCalendarId = calendar.id
+                saveEventToJournalAndCalendar(draft, calendar.id)
+            },
+            onCancel = {
+                // User cancelled calendar pick — still keep the journal bullet locally.
+                journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+                refreshJournal()
+            },
+        )
+    }
+
+    private fun saveEventToJournalAndCalendar(draft: PendingEventDraft, calendarId: Long) {
+        val entry = journalStore.add(
+            text = draft.text,
+            type = BulletType.EVENT,
+            log = draft.log,
+            dateKey = draft.dateKey,
+            priority = draft.priority,
+            calendarId = calendarId,
+            fromCalendar = false,
+        )
+        val eventId = CalendarSyncHelper.insertEvent(requireContext(), entry, calendarId)
+        if (eventId != null) {
+            journalStore.setCalendarLink(entry.id, eventId, calendarId, fromCalendar = false)
+            requireContext().showToast(R.string.event_synced_to_calendar)
+        } else {
+            requireContext().showToast(R.string.event_calendar_sync_failed)
+        }
+        pullCalendarEventsIntoJournal()
+        refreshJournal()
+    }
+
+    private fun pullCalendarEventsIntoJournal() {
+        if (!::journalStore.isInitialized) return
+        if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) return
+        CalendarSyncHelper.syncIntoJournal(requireContext(), journalStore)
     }
 
     private fun toggleJournalEntry(entry: JournalEntry) {
@@ -330,6 +441,13 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun deleteJournalEntry(entry: JournalEntry) {
+        if (entry.type == BulletType.EVENT) {
+            CalendarSyncHelper.deleteEvent(
+                requireContext(),
+                entry.calendarEventId,
+                fromCalendar = entry.fromCalendar,
+            )
+        }
         journalStore.delete(entry.id)
         requireContext().showToast(R.string.entry_deleted)
         refreshJournal()
