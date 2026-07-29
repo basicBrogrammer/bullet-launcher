@@ -25,7 +25,7 @@ import java.util.TimeZone
 object CalendarSyncHelper {
 
     private const val TAG = "CalendarSync"
-    private const val EVENT_DESCRIPTION = "Added from Olauncher journal"
+    private const val EVENT_DESCRIPTION = "Added from Bullet Launcher journal"
     /** Pull events from the start of the previous month through N months ahead. */
     private const val SYNC_MONTHS_AHEAD = 6
 
@@ -166,6 +166,31 @@ object CalendarSyncHelper {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to insert calendar event", e)
             null
+        }
+    }
+
+    /**
+     * Updates the title of a previously synced calendar event.
+     * Returns true if the row was updated.
+     */
+    fun updateEvent(context: Context, entry: JournalEntry): Boolean {
+        val calendarEventId = entry.calendarEventId ?: return false
+        if (calendarEventId <= 0L) return false
+        if (entry.type != BulletType.EVENT) return false
+        if (!hasCalendarPermissions(context)) return false
+
+        val values = ContentValues().apply {
+            put(CalendarContract.Events.TITLE, entry.text)
+        }
+        return try {
+            val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, calendarEventId)
+            context.contentResolver.update(uri, values, null, null) > 0
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Missing calendar permission on update", e)
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update calendar event $calendarEventId", e)
+            false
         }
     }
 

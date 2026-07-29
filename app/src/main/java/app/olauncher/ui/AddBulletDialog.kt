@@ -11,13 +11,16 @@ import android.widget.EditText
 import android.widget.TextView
 import app.olauncher.R
 import app.olauncher.data.BulletType
+import app.olauncher.data.JournalEntry
 import app.olauncher.helper.getColorFromAttr
 
 object AddBulletDialog {
 
     fun show(
         context: Context,
+        existing: JournalEntry? = null,
         onSave: (text: String, type: BulletType, priority: Boolean) -> Unit,
+        onDelete: (() -> Unit)? = null,
     ) {
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -26,19 +29,37 @@ object AddBulletDialog {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setBackgroundDrawableResource(R.drawable.rounded_rectangle_dark)
 
+        val title = view.findViewById<TextView>(R.id.dialogTitle)
         val input = view.findViewById<EditText>(R.id.entryInput)
         val typeTask = view.findViewById<TextView>(R.id.typeTask)
         val typeEvent = view.findViewById<TextView>(R.id.typeEvent)
         val typeNote = view.findViewById<TextView>(R.id.typeNote)
         val calendarSyncHint = view.findViewById<TextView>(R.id.calendarSyncHint)
         val priorityToggle = view.findViewById<TextView>(R.id.priorityToggle)
+        val delete = view.findViewById<TextView>(R.id.deleteButton)
         val cancel = view.findViewById<TextView>(R.id.cancelButton)
         val save = view.findViewById<TextView>(R.id.saveButton)
 
-        var selectedType = BulletType.TASK
-        var priority = false
+        var selectedType = existing?.type ?: BulletType.TASK
+        var priority = existing?.priority ?: false
         val selectedAlpha = 1f
         val dimAlpha = 0.45f
+        val editing = existing != null
+
+        title.setText(if (editing) R.string.edit_entry else R.string.add_entry)
+        if (existing != null) {
+            input.setText(existing.text)
+            input.setSelection(existing.text.length)
+        }
+        if (editing && onDelete != null) {
+            delete.visibility = View.VISIBLE
+            delete.setOnClickListener {
+                onDelete()
+                dialog.dismiss()
+            }
+        } else {
+            delete.visibility = View.GONE
+        }
 
         fun refreshType() {
             typeTask.alpha = if (selectedType == BulletType.TASK) selectedAlpha else dimAlpha

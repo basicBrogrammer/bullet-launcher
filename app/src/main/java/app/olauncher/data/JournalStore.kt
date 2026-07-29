@@ -169,6 +169,28 @@ class JournalStore(context: Context) {
         return updated
     }
 
+    fun update(
+        id: String,
+        text: String,
+        type: BulletType,
+        priority: Boolean,
+    ): JournalEntry? {
+        val all = getAll().toMutableList()
+        val index = all.indexOfFirst { it.id == id }
+        if (index < 0) return null
+        val current = all[index]
+        val updated = current.copy(
+            text = text.trim(),
+            type = type,
+            priority = priority,
+            // Completing only applies to tasks; clear when changing away.
+            completed = if (type == BulletType.TASK) current.completed else false,
+        )
+        all[index] = updated
+        saveAll(all)
+        return updated
+    }
+
     fun delete(id: String) {
         saveAll(getAll().filterNot { it.id == id })
     }

@@ -151,6 +151,18 @@ class ScreenshotDemoTest {
     }
 
     @Test
+    fun editBullet() = capture("05d_edit_bullet", R.layout.dialog_add_bullet) { _, root ->
+        root.findViewById<TextView>(R.id.dialogTitle).setText(R.string.edit_entry)
+        root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
+        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
+        root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.findViewById<TextView>(R.id.deleteButton).visibility = View.VISIBLE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
     fun addBulletEventSelected() = capture("05b_add_bullet_event", R.layout.dialog_add_bullet) { _, root ->
         root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
         root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
@@ -185,6 +197,37 @@ class ScreenshotDemoTest {
     @Test
     fun homeExpanded() = capture("06b_home_expanded", R.layout.fragment_home) { activity, root ->
         populateHomeDemo(activity, root, expanded = true)
+    }
+
+    @Test
+    fun homeWithAppDrawer() = capture("06c_home_app_drawer", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = true)
+        val density = activity.resources.displayMetrics.density
+        val overlay = root.findViewById<ViewGroup>(R.id.appDrawerOverlay)
+        overlay.visibility = View.VISIBLE
+        overlay.setPadding(0, 0, 0, (240 * density).toInt())
+        val drawer = LayoutInflater.from(activity).inflate(R.layout.fragment_app_drawer, overlay, false)
+        overlay.addView(
+            drawer,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        val recycler = drawer.findViewById<RecyclerView>(R.id.recyclerView)
+        recycler.layoutManager = LinearLayoutManager(activity)
+        val adapter = AppDrawerAdapter(
+            flag = app.olauncher.data.Constants.FLAG_LAUNCH_APP,
+            appLabelGravity = android.view.Gravity.START,
+            appClickListener = {},
+            appInfoListener = {},
+            appDeleteListener = {},
+            appHideListener = { _, _ -> },
+            appRenameListener = { _, _ -> },
+        )
+        recycler.adapter = adapter
+        adapter.setAppList(demoAppList())
+        root.findViewById<View>(R.id.addBulletButton).visibility = View.GONE
     }
 
     private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean) {
@@ -280,7 +323,29 @@ class ScreenshotDemoTest {
             appRenameListener = { _, _ -> },
         )
         recycler.adapter = adapter
-        val apps = listOf(
+        adapter.setAppList(demoAppList())
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w411dp-h891dp-night-xxhdpi")
+    fun appDrawerDark() = capture("07b_app_drawer_dark", R.layout.fragment_app_drawer) { activity, root ->
+        val recycler = root.findViewById<RecyclerView>(R.id.recyclerView)
+        recycler.layoutManager = LinearLayoutManager(activity)
+        val adapter = AppDrawerAdapter(
+            flag = app.olauncher.data.Constants.FLAG_LAUNCH_APP,
+            appLabelGravity = android.view.Gravity.START,
+            appClickListener = {},
+            appInfoListener = {},
+            appDeleteListener = {},
+            appHideListener = { _, _ -> },
+            appRenameListener = { _, _ -> },
+        )
+        recycler.adapter = adapter
+        adapter.setAppList(demoAppList())
+    }
+
+    private fun demoAppList(): MutableList<AppModel> =
+        listOf(
             "Calculator", "Calendar", "Camera", "Chrome", "Clock",
             "Contacts", "Files", "Gmail", "Maps", "Messages",
             "Phone", "Photos", "Play Store", "Settings", "YouTube",
@@ -294,8 +359,6 @@ class ScreenshotDemoTest {
                 user = Process.myUserHandle(),
             ) as AppModel
         }.toMutableList()
-        adapter.setAppList(apps)
-    }
 
     private fun demoEntry(
         text: String,
@@ -384,8 +447,11 @@ class ScreenshotDemoTest {
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        // Window background is transparent (launcher draws over wallpaper); use a light backdrop.
-        canvas.drawColor(Color.WHITE)
+        // Launcher window is wallpaper-backed; use a theme-appropriate backdrop.
+        val night = activity.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        canvas.drawColor(if (night) Color.parseColor("#121212") else Color.WHITE)
         decor.draw(canvas)
 
         val file = File(outDir, "$name.png")

@@ -78,7 +78,7 @@
         android:id="@+id/appDrawerOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?attr/primaryShadeDarkColor"
+        android:background="?attr/drawerBackgroundColor"
         android:clickable="true"
         android:elevation="4dp"
         android:focusable="true"
@@ -259,19 +259,6 @@
         android:padding="14dp"
         android:src="@drawable/ic_add"
         android:tint="?attr/primaryColor" />
-
-    <TextView
-        android:id="@+id/firstRunTips"
-        style="@style/TextSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="280dp"
-        android:text="@string/swipe_up_for_apps"
-        android:visibility="gone"
-        tools:visibility="visible" />
 
     <!-- Set default launcher -->
     <TextView

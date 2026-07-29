@@ -12,6 +12,7 @@ import android.view.animation.AnimationUtils
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -35,6 +36,7 @@ import app.olauncher.helper.openUrl
 import app.olauncher.helper.showKeyboard
 import app.olauncher.helper.showToast
 import app.olauncher.helper.uninstall
+import app.olauncher.listener.OnSwipeTouchListener
 
 class AppDrawerFragment : BaseFragment() {
 
@@ -79,6 +81,8 @@ class AppDrawerFragment : BaseFragment() {
         initAdapter()
         initObservers()
         initClickListeners()
+        initSwipeToDismiss()
+        initBackHandler()
     }
 
     private fun initViews() {
@@ -94,6 +98,27 @@ class AppDrawerFragment : BaseFragment() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun initBackHandler() {
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    dismissDrawer(popToHome = true)
+                }
+            }
+        )
+    }
+
+    private fun initSwipeToDismiss() {
+        val dismissOnSwipeDown = object : OnSwipeTouchListener(requireContext()) {
+            override fun onSwipeDown() {
+                super.onSwipeDown()
+                checkMessageAndExit()
+            }
+        }
+        binding.root.setOnTouchListener(dismissOnSwipeDown)
     }
 
     private fun initSearch() {
