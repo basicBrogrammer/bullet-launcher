@@ -28,4 +28,8 @@
     <color name="blackInverseTrans80">#CCFFFFFF</color>
     <color name="blackInverseTrans90">#E6FFFFFF</color>
 
+    <!-- App drawer surfaces -->
+    <color name="drawerBackgroundLight">#F3EEE6</color>
+    <color name="drawerBackgroundDark">#2C2C2E</color>
+
 </resources>

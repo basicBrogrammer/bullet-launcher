@@ -187,6 +187,37 @@ class ScreenshotDemoTest {
         populateHomeDemo(activity, root, expanded = true)
     }
 
+    @Test
+    fun homeWithAppDrawer() = capture("06c_home_app_drawer", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = true)
+        val density = activity.resources.displayMetrics.density
+        val overlay = root.findViewById<ViewGroup>(R.id.appDrawerOverlay)
+        overlay.visibility = View.VISIBLE
+        overlay.setPadding(0, 0, 0, (240 * density).toInt())
+        val drawer = LayoutInflater.from(activity).inflate(R.layout.fragment_app_drawer, overlay, false)
+        overlay.addView(
+            drawer,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        val recycler = drawer.findViewById<RecyclerView>(R.id.recyclerView)
+        recycler.layoutManager = LinearLayoutManager(activity)
+        val adapter = AppDrawerAdapter(
+            flag = app.olauncher.data.Constants.FLAG_LAUNCH_APP,
+            appLabelGravity = android.view.Gravity.START,
+            appClickListener = {},
+            appInfoListener = {},
+            appDeleteListener = {},
+            appHideListener = { _, _ -> },
+            appRenameListener = { _, _ -> },
+        )
+        recycler.adapter = adapter
+        adapter.setAppList(demoAppList())
+        root.findViewById<View>(R.id.addBulletButton).visibility = View.GONE
+    }
+
     private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean) {
         root.findViewById<View>(R.id.dateTimeLayout).visibility = View.GONE
         root.findViewById<View>(R.id.journalPager).visibility = View.GONE
@@ -280,7 +311,11 @@ class ScreenshotDemoTest {
             appRenameListener = { _, _ -> },
         )
         recycler.adapter = adapter
-        val apps = listOf(
+        adapter.setAppList(demoAppList())
+    }
+
+    private fun demoAppList(): MutableList<AppModel> =
+        listOf(
             "Calculator", "Calendar", "Camera", "Chrome", "Clock",
             "Contacts", "Files", "Gmail", "Maps", "Messages",
             "Phone", "Photos", "Play Store", "Settings", "YouTube",
@@ -294,8 +329,6 @@ class ScreenshotDemoTest {
                 user = Process.myUserHandle(),
             ) as AppModel
         }.toMutableList()
-        adapter.setAppList(apps)
-    }
 
     private fun demoEntry(
         text: String,

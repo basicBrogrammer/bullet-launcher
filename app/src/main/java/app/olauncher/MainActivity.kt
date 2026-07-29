@@ -329,6 +329,7 @@ class MainActivity : AppCompatActivity() {
     private fun backToHomeScreen() {
         if (viewModel.isPrivateSpaceToggling) return
         binding.messageLayout.visibility = View.GONE
+        viewModel.backToHome.call()
         if (navController.currentDestination?.id != R.id.mainFragment)
             navController.popBackStack(R.id.mainFragment, false)
     }

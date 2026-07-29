@@ -258,10 +258,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun initObservers() {
-        if (prefs.firstSettingsOpen) {
-            binding.firstRunTips.visibility = View.VISIBLE
-            binding.setDefaultLauncher.visibility = View.GONE
-        } else binding.firstRunTips.visibility = View.GONE
+        viewModel.backToHome.observe(viewLifecycleOwner) {
+            closeAppDrawerOverlay()
+            if (binding.journalPager.currentItem != JournalPages.DAILY) {
+                binding.journalPager.setCurrentItem(JournalPages.DAILY, false)
+            }
+        }
 
         viewModel.refreshHome.observe(viewLifecycleOwner) {
             populateHomeScreen(it)
@@ -275,7 +277,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 prefs.homeBottomAlignment = false
                 setHomeAlignment()
             }
-            if (binding.firstRunTips.isVisible) return@Observer
             binding.setDefaultLauncher.isVisible = it.not() && prefs.hideSetDefaultLauncher.not()
         })
         viewModel.homeAppAlignment.observe(viewLifecycleOwner) {
@@ -542,16 +543,25 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val handleGestures = object : OnSwipeTouchListener(requireContext()) {
             override fun onSwipeUp() {
                 super.onSwipeUp()
+                if (binding.appDrawerOverlay.isVisible) return
                 if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
             }
 
             override fun onSwipeDown() {
                 super.onSwipeDown()
-                if (prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(false)
+                if (binding.appDrawerOverlay.isVisible) {
+                    closeAppDrawerOverlay()
+                } else if (prefs.homeAppsSheetExpanded) {
+                    setHomeAppsSheetExpanded(false)
+                }
             }
 
             override fun onClick() {
                 super.onClick()
+                if (binding.appDrawerOverlay.isVisible) {
+                    closeAppDrawerOverlay()
+                    return
+                }
                 setHomeAppsSheetExpanded(!prefs.homeAppsSheetExpanded)
             }
         }
@@ -901,6 +911,15 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun swipeDownAction() {
+        // Drawer / expanded sheet consume swipe-down; system notifications only when closed.
+        if (binding.appDrawerOverlay.isVisible) {
+            closeAppDrawerOverlay()
+            return
+        }
+        if (prefs.homeAppsSheetExpanded) {
+            setHomeAppsSheetExpanded(false)
+            return
+        }
         when (prefs.swipeDownAction) {
             Constants.SwipeDownAction.SEARCH -> openSearch(requireContext())
             else -> expandNotificationDrawer(requireContext())
@@ -997,6 +1016,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
             override fun onSwipeUp() {
                 super.onSwipeUp()
+                if (binding.appDrawerOverlay.isVisible) return
                 showAppList(Constants.FLAG_LAUNCH_APP)
             }
 
@@ -1035,16 +1055,19 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         return object : ViewSwipeTouchListener(context, view) {
             override fun onSwipeLeft() {
                 super.onSwipeLeft()
+                if (binding.appDrawerOverlay.isVisible) return
                 openSwipeLeftApp()
             }
 
             override fun onSwipeRight() {
                 super.onSwipeRight()
+                if (binding.appDrawerOverlay.isVisible) return
                 openSwipeRightApp()
             }
 
             override fun onSwipeUp() {
                 super.onSwipeUp()
+                if (binding.appDrawerOverlay.isVisible) return
                 showAppList(Constants.FLAG_LAUNCH_APP)
             }
 
