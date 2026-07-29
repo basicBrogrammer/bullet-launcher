@@ -314,6 +314,24 @@ class ScreenshotDemoTest {
         adapter.setAppList(demoAppList())
     }
 
+    @Test
+    @Config(sdk = [34], qualifiers = "w411dp-h891dp-night-xxhdpi")
+    fun appDrawerDark() = capture("07b_app_drawer_dark", R.layout.fragment_app_drawer) { activity, root ->
+        val recycler = root.findViewById<RecyclerView>(R.id.recyclerView)
+        recycler.layoutManager = LinearLayoutManager(activity)
+        val adapter = AppDrawerAdapter(
+            flag = app.olauncher.data.Constants.FLAG_LAUNCH_APP,
+            appLabelGravity = android.view.Gravity.START,
+            appClickListener = {},
+            appInfoListener = {},
+            appDeleteListener = {},
+            appHideListener = { _, _ -> },
+            appRenameListener = { _, _ -> },
+        )
+        recycler.adapter = adapter
+        adapter.setAppList(demoAppList())
+    }
+
     private fun demoAppList(): MutableList<AppModel> =
         listOf(
             "Calculator", "Calendar", "Camera", "Chrome", "Clock",
@@ -417,8 +435,11 @@ class ScreenshotDemoTest {
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        // Window background is transparent (launcher draws over wallpaper); use a light backdrop.
-        canvas.drawColor(Color.WHITE)
+        // Launcher window is wallpaper-backed; use a theme-appropriate backdrop.
+        val night = activity.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        canvas.drawColor(if (night) Color.parseColor("#121212") else Color.WHITE)
         decor.draw(canvas)
 
         val file = File(outDir, "$name.png")
