@@ -1,5 +1,6 @@
 package app.olauncher.ui
 
+import android.Manifest
 import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -15,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -24,8 +26,10 @@ import app.olauncher.BuildConfig
 import app.olauncher.MainViewModel
 import app.olauncher.R
 import app.olauncher.data.Constants
+import app.olauncher.data.JournalStore
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentSettingsBinding
+import app.olauncher.helper.CalendarSyncHelper
 import app.olauncher.helper.IconPackHelper
 import app.olauncher.helper.animateAlpha
 import app.olauncher.helper.appUsagePermissionGranted
@@ -56,6 +60,22 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
     private val showPentastic = System.currentTimeMillis() % 2 == 0L
     private var showInstagram = false
 
+    private val calendarPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.READ_CALENDAR] == true &&
+            grants[Manifest.permission.WRITE_CALENDAR] == true
+        if (!granted) {
+            prefs.showCalendarEvents = false
+            populateCalendarEventsOnOff()
+            requireContext().showToast(R.string.event_calendar_permission_needed)
+            return@registerForActivityResult
+        }
+        prefs.showCalendarEvents = true
+        populateCalendarEventsOnOff()
+        importCalendarEventsNow(showFeedback = true)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
@@ -77,6 +97,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         populateProMessage()
         populateKeyboardText()
         populateScreenTimeOnOff()
+        populateCalendarEventsOnOff()
         populateLockSettings()
         // Home button for recents feature disabled
         // populateHomeButtonRecents()
@@ -117,6 +138,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             R.id.olauncherHiddenApps -> showHiddenApps()
             R.id.moreFeatures -> viewModel.showDialog.postValue(Constants.Dialog.PRO_MESSAGE)
             R.id.screenTimeOnOff -> viewModel.showDialog.postValue(Constants.Dialog.DIGITAL_WELLBEING)
+            R.id.calendarEventsOnOff -> toggleCalendarEvents()
             R.id.appInfo -> openAppInfo(requireContext(), Process.myUserHandle(), BuildConfig.APPLICATION_ID)
             R.id.setLauncher -> viewModel.resetLauncherLiveData.call()
             R.id.toggleLock -> toggleLockMode()
@@ -231,6 +253,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         // Home button for recents feature disabled
         // binding.homeButtonRecents.setOnClickListener(this)
         binding.homeAppsNum.setOnClickListener(this)
+        binding.calendarEventsOnOff.setOnClickListener(this)
         binding.screenTimeOnOff.setOnClickListener(this)
         binding.dailyWallpaperUrl.setOnClickListener(this)
         binding.dailyWallpaper.setOnClickListener(this)
@@ -610,6 +633,57 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             if (requireContext().appUsagePermissionGranted()) binding.screenTimeOnOff.text = getString(R.string.on)
             else binding.screenTimeOnOff.text = getString(R.string.off)
         } else binding.screenTimeLayout.visibility = View.GONE
+    }
+
+    private fun populateCalendarEventsOnOff() {
+        // Prior versions enabled inbound sync via permission alone.
+        if (!prefs.hasShowCalendarEventsPref &&
+            CalendarSyncHelper.hasCalendarPermissions(requireContext())
+        ) {
+            prefs.showCalendarEvents = true
+        }
+        val on = prefs.showCalendarEvents &&
+            CalendarSyncHelper.hasCalendarPermissions(requireContext())
+        binding.calendarEventsOnOff.text = getString(if (on) R.string.on else R.string.off)
+    }
+
+    private fun toggleCalendarEvents() {
+        val currentlyOn = prefs.showCalendarEvents &&
+            CalendarSyncHelper.hasCalendarPermissions(requireContext())
+        if (currentlyOn) {
+            prefs.showCalendarEvents = false
+            JournalStore(requireContext()).removeImportedCalendarEvents()
+            populateCalendarEventsOnOff()
+            viewModel.refreshHome(false)
+            requireContext().showToast(R.string.calendar_events_hidden)
+            return
+        }
+        if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
+            calendarPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_CALENDAR,
+                    Manifest.permission.WRITE_CALENDAR,
+                )
+            )
+            return
+        }
+        prefs.showCalendarEvents = true
+        populateCalendarEventsOnOff()
+        importCalendarEventsNow(showFeedback = true)
+    }
+
+    private fun importCalendarEventsNow(showFeedback: Boolean) {
+        val store = JournalStore(requireContext())
+        val result = CalendarSyncHelper.syncIntoJournal(requireContext(), store)
+        viewModel.refreshHome(false)
+        if (!showFeedback) return
+        when {
+            result.importedOrUpdated > 0 ->
+                requireContext().showToast(
+                    getString(R.string.calendar_events_imported_count, result.importedOrUpdated)
+                )
+            else -> requireContext().showToast(R.string.calendar_events_none)
+        }
     }
 
     private fun populateKeyboardText() {

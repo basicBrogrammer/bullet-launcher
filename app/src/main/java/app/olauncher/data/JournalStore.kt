@@ -195,6 +195,15 @@ class JournalStore(context: Context) {
         saveAll(getAll().filterNot { it.id == id })
     }
 
+    /** Removes bullets that were imported from the device calendar. Returns how many were removed. */
+    fun removeImportedCalendarEvents(): Int {
+        val all = getAll()
+        val kept = all.filterNot { it.fromCalendar }
+        val removed = all.size - kept.size
+        if (removed > 0) saveAll(kept)
+        return removed
+    }
+
     fun setCalendarLink(
         id: String,
         calendarEventId: Long?,

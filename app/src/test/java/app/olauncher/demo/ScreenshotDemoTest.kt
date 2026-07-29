@@ -64,8 +64,9 @@ class ScreenshotDemoTest {
         adapter.submit(
             listOf(
                 demoEntry("Morning pages", BulletType.TASK, priority = true),
-                demoEntry("Team standup · 10:00", BulletType.EVENT),
-                demoEntry("Dentist · 15:30", BulletType.EVENT),
+                demoEntry("Team standup · 10:00", BulletType.EVENT, fromCalendar = true),
+                demoEntry("Dentist · 15:30", BulletType.EVENT, fromCalendar = true),
+                demoEntry("Flight to NYC · 19:45", BulletType.EVENT, fromCalendar = true),
                 demoEntry("Idea: simplify home gestures", BulletType.NOTE),
                 demoEntry("Review monthly goals", BulletType.TASK),
             ).map { JournalListItem.Bullet(it) }
@@ -187,6 +188,31 @@ class ScreenshotDemoTest {
             list.addView(row)
         }
         root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun settingsCalendarEvents() = capture("05e_settings_calendar_events", R.layout.fragment_settings) { activity, root ->
+        // Build a focused crop of the Home screen card with Calendar events On.
+        val scroll = root.findViewById<android.widget.ScrollView>(R.id.scrollView)
+        scroll.setBackgroundColor(Color.parseColor("#E8E4DC"))
+        root.findViewById<TextView>(R.id.calendarEventsOnOff).setText(R.string.on)
+        root.findViewById<TextView>(R.id.homeAppsNum).text = "5"
+        root.findViewById<TextView>(R.id.dateTime).setText(R.string.on)
+        root.findViewById<TextView>(R.id.statusBar).setText(R.string.off)
+        // Measure and jump so the calendar row is near the top of the viewport.
+        scroll.measure(
+            View.MeasureSpec.makeMeasureSpec(activity.resources.displayMetrics.widthPixels, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(activity.resources.displayMetrics.heightPixels, View.MeasureSpec.EXACTLY),
+        )
+        scroll.layout(0, 0, scroll.measuredWidth, scroll.measuredHeight)
+        val calendarRow = root.findViewById<View>(R.id.calendarEventsLayout)
+        var y = calendarRow.top
+        var parent = calendarRow.parent as? View
+        while (parent != null && parent !== scroll) {
+            y += parent.top
+            parent = parent.parent as? View
+        }
+        scroll.scrollTo(0, (y - 48 * activity.resources.displayMetrics.density).toInt().coerceAtLeast(0))
     }
 
     @Test
@@ -367,6 +393,7 @@ class ScreenshotDemoTest {
         completed: Boolean = false,
         log: JournalLog = JournalLog.DAILY,
         day: String = "2026-07-27",
+        fromCalendar: Boolean = false,
     ) = JournalEntry(
         id = text,
         text = text,
@@ -375,6 +402,7 @@ class ScreenshotDemoTest {
         dateKey = day,
         priority = priority,
         completed = completed,
+        fromCalendar = fromCalendar,
     )
 
     /** Synthetic colored icon; ImageView B&W filter turns it monochrome for demos. */

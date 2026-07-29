@@ -95,6 +95,7 @@ class Prefs(context: Context) {
     private val CALENDAR_APP_USER = "CALENDAR_APP_USER"
     private val CALENDAR_APP_CLASS_NAME = "CALENDAR_APP_CLASS_NAME"
     private val PREFERRED_CALENDAR_ID = "PREFERRED_CALENDAR_ID"
+    private val SHOW_CALENDAR_EVENTS = "SHOW_CALENDAR_EVENTS"
     private val SCREEN_TIME_APP_PACKAGE = "SCREEN_TIME_APP_PACKAGE"
     private val SCREEN_TIME_APP_USER = "SCREEN_TIME_APP_USER"
     private val SCREEN_TIME_APP_CLASS_NAME = "SCREEN_TIME_APP_CLASS_NAME"
@@ -458,6 +459,18 @@ class Prefs(context: Context) {
     var preferredCalendarId: Long
         get() = prefs.getLong(PREFERRED_CALENDAR_ID, -1L)
         set(value) = prefs.edit { putLong(PREFERRED_CALENDAR_ID, value).apply() }
+
+    /**
+     * When true, device / Google Calendar events are pulled into the journal
+     * as ○ Event bullets (requires READ/WRITE_CALENDAR).
+     */
+    var showCalendarEvents: Boolean
+        get() = prefs.getBoolean(SHOW_CALENDAR_EVENTS, false)
+        set(value) = prefs.edit { putBoolean(SHOW_CALENDAR_EVENTS, value).apply() }
+
+    /** True once the user (or a migration) has set [showCalendarEvents]. */
+    val hasShowCalendarEventsPref: Boolean
+        get() = prefs.contains(SHOW_CALENDAR_EVENTS)
 
     var screenTimeAppPackage: String
         get() = prefs.getString(SCREEN_TIME_APP_PACKAGE, "").toString()

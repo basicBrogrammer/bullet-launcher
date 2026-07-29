@@ -58,6 +58,15 @@ object CalendarSyncHelper {
         val allDay: Boolean,
     )
 
+    data class SyncResult(
+        val added: Int = 0,
+        val updated: Int = 0,
+        val removed: Int = 0,
+    ) {
+        val changed: Boolean get() = added > 0 || updated > 0 || removed > 0
+        val importedOrUpdated: Int get() = added + updated
+    }
+
     fun hasCalendarPermissions(context: Context): Boolean {
         val read = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR)
         val write = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR)
@@ -224,11 +233,10 @@ object CalendarSyncHelper {
 
     /**
      * Pulls device/Google Calendar events into the journal and removes journal
-     * events whose calendar counterparts were deleted. Returns true if the
-     * journal changed.
+     * events whose calendar counterparts were deleted. Returns counts of changes.
      */
-    fun syncIntoJournal(context: Context, store: JournalStore): Boolean {
-        if (!hasCalendarPermissions(context)) return false
+    fun syncIntoJournal(context: Context, store: JournalStore): SyncResult {
+        if (!hasCalendarPermissions(context)) return SyncResult()
 
         val (rangeStart, rangeEnd) = syncRangeMillis()
         val remotes = queryInstances(context, rangeStart, rangeEnd)
@@ -237,7 +245,9 @@ object CalendarSyncHelper {
         val linkedByKey = linked.associateBy { syncKey(it.calendarEventId!!, it.dateKey) }
         val linkedByEventId = linked.groupBy { it.calendarEventId!! }
 
-        var changed = false
+        var added = 0
+        var updated = 0
+        var removed = 0
         val seenKeys = mutableSetOf<String>()
         val seenEntryIds = mutableSetOf<String>()
         val currentMonth = store.currentMonthKey()
@@ -268,7 +278,7 @@ object CalendarSyncHelper {
                 seenKeys.add(syncKey(remote.eventId, existing.dateKey))
                 if (existing.text != text || existing.dateKey != storeKey || existing.log != log) {
                     store.updateSyncedEvent(existing.id, text, log, storeKey, remote.calendarId)
-                    changed = true
+                    updated++
                 }
             } else {
                 store.add(
@@ -281,7 +291,7 @@ object CalendarSyncHelper {
                     calendarId = remote.calendarId,
                     fromCalendar = true,
                 )
-                changed = true
+                added++
                 Log.d(TAG, "Imported calendar event ${remote.eventId} → $storeKey ($text)")
             }
         }
@@ -294,11 +304,11 @@ object CalendarSyncHelper {
             if (key in seenKeys) continue
             if (!dateKeyInSyncWindow(entry.dateKey, rangeStart, rangeEnd)) continue
             store.delete(entry.id)
-            changed = true
+            removed++
             Log.d(TAG, "Removed journal event ${entry.id}; calendar event $eventId gone")
         }
 
-        return changed
+        return SyncResult(added = added, updated = updated, removed = removed)
     }
 
     private fun findLinkedEntry(
@@ -369,6 +379,7 @@ object CalendarSyncHelper {
             CalendarContract.Instances.BEGIN,
             CalendarContract.Instances.END,
             CalendarContract.Instances.ALL_DAY,
+            CalendarContract.Instances.STATUS,
         )
 
         return try {
@@ -379,8 +390,11 @@ object CalendarSyncHelper {
                 val beginIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.BEGIN)
                 val endIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.END)
                 val allDayIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.ALL_DAY)
+                val statusIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.STATUS)
                 buildList {
                     while (cursor.moveToNext()) {
+                        val status = cursor.getInt(statusIdx)
+                        if (status == CalendarContract.Events.STATUS_CANCELED) continue
                         val title = cursor.getString(titleIdx).orEmpty()
                         // Skip empty cancelled shells
                         if (title.isBlank()) continue
