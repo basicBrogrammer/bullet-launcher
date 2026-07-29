@@ -589,7 +589,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val horizontalMargin = if (isLandscape) 64.dpToPx() else 10.dpToPx()
-        val marginTop = if (isLandscape) 56.dpToPx() else 72.dpToPx()
+        val marginTop = if (isLandscape) 8.dpToPx() else 16.dpToPx()
         val params = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
@@ -704,7 +704,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.addBulletButton.layoutParams = params
         val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
         pagerParams.bottomMargin = pagerMargin
-        val topMargin = if (binding.dateTimeLayout.isVisible) 110.dpToPx() else 48.dpToPx()
+        // Header sits at the top edge; leave ~one time-size of room for the clock row.
+        val topMargin = if (binding.dateTimeLayout.isVisible) 72.dpToPx() else 24.dpToPx()
         pagerParams.topMargin = topMargin
         binding.journalPager.layoutParams = pagerParams
     }
