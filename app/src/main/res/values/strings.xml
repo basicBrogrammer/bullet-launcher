@@ -193,6 +193,8 @@
     <string name="future_log">Future Log</string>
     <string name="future_log_subtitle">Looking ahead</string>
     <string name="add_entry">New entry</string>
+    <string name="edit_entry">Edit entry</string>
+    <string name="delete_entry">Delete</string>
     <string name="entry_hint">What\'s on your mind?</string>
     <string name="rapid_logging">Rapid logging</string>
     <string name="rapid_logging_legend">• task   ○ event   – note   * priority</string>

@@ -170,6 +170,31 @@ object CalendarSyncHelper {
     }
 
     /**
+     * Updates the title of a previously synced calendar event.
+     * Returns true if the row was updated.
+     */
+    fun updateEvent(context: Context, entry: JournalEntry): Boolean {
+        val calendarEventId = entry.calendarEventId ?: return false
+        if (calendarEventId <= 0L) return false
+        if (entry.type != BulletType.EVENT) return false
+        if (!hasCalendarPermissions(context)) return false
+
+        val values = ContentValues().apply {
+            put(CalendarContract.Events.TITLE, entry.text)
+        }
+        return try {
+            val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, calendarEventId)
+            context.contentResolver.update(uri, values, null, null) > 0
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Missing calendar permission on update", e)
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update calendar event $calendarEventId", e)
+            false
+        }
+    }
+
+    /**
      * Deletes a previously synced calendar event.
      * Skips deleting recurring series that were imported (avoids wiping the whole series).
      */

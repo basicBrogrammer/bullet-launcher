@@ -83,6 +83,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val priority: Boolean,
         val log: JournalLog,
         val dateKey: String,
+        /** When set, calendar sync attaches to this existing journal entry. */
+        val existingId: String? = null,
     )
 
     private val calendarPermissionLauncher = registerForActivityResult(
@@ -95,7 +97,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             pendingEventDraft = null
             // Still save locally so the bullet isn't lost; just skip calendar sync.
             if (draft != null) {
-                journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+                ensureLocalEventEntry(draft)
                 refreshJournal()
             }
             requireContext().showToast(R.string.event_calendar_permission_needed)
@@ -328,7 +330,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             store = journalStore,
             onIndex = { showIndexDialog() },
             onToggle = { entry -> toggleJournalEntry(entry) },
-            onLongPress = { entry -> deleteJournalEntry(entry) },
+            onLongPress = { entry -> showEditBulletDialog(entry) },
         )
         journalPagerAdapter = adapter
         binding.journalPager.adapter = adapter
@@ -347,20 +349,82 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun showAddBulletDialog() {
-        AddBulletDialog.show(requireContext()) { text, type, priority ->
-            val page = binding.journalPager.currentItem
-            val (log, dateKey) = when (page) {
-                JournalPages.MONTHLY -> JournalLog.MONTHLY to journalStore.todayKey()
-                JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
-                else -> JournalLog.DAILY to journalStore.todayKey()
+        AddBulletDialog.show(
+            context = requireContext(),
+            onSave = { text, type, priority ->
+                val page = binding.journalPager.currentItem
+                val (log, dateKey) = when (page) {
+                    JournalPages.MONTHLY -> JournalLog.MONTHLY to journalStore.todayKey()
+                    JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
+                    else -> JournalLog.DAILY to journalStore.todayKey()
+                }
+                if (type == BulletType.EVENT) {
+                    beginEventSave(text, priority, log, dateKey)
+                } else {
+                    journalStore.add(text, type, log, dateKey, priority)
+                    refreshJournal()
+                }
+            },
+        )
+    }
+
+    private fun showEditBulletDialog(entry: JournalEntry) {
+        AddBulletDialog.show(
+            context = requireContext(),
+            existing = entry,
+            onSave = { text, type, priority ->
+                saveEditedBullet(entry, text, type, priority)
+            },
+            onDelete = { deleteJournalEntry(entry) },
+        )
+    }
+
+    private fun saveEditedBullet(
+        original: JournalEntry,
+        text: String,
+        type: BulletType,
+        priority: Boolean,
+    ) {
+        val wasEvent = original.type == BulletType.EVENT
+        val updated = journalStore.update(original.id, text, type, priority) ?: return
+
+        when {
+            // Newly an event (or still unlinked): offer calendar sync for this entry.
+            type == BulletType.EVENT && updated.calendarEventId == null -> {
+                beginEventLinkForExisting(updated)
+                return
             }
-            if (type == BulletType.EVENT) {
-                beginEventSave(text, priority, log, dateKey)
-            } else {
-                journalStore.add(text, type, log, dateKey, priority)
-                refreshJournal()
+            // Still an event with a calendar link: push title change.
+            type == BulletType.EVENT && updated.calendarEventId != null -> {
+                CalendarSyncHelper.updateEvent(requireContext(), updated)
+            }
+            // Was an event, now something else: drop the calendar event.
+            wasEvent && type != BulletType.EVENT -> {
+                CalendarSyncHelper.deleteEvent(
+                    requireContext(),
+                    original.calendarEventId,
+                    fromCalendar = original.fromCalendar,
+                )
+                journalStore.setCalendarLink(updated.id, null, null, fromCalendar = false)
             }
         }
+        refreshJournal()
+    }
+
+    private fun beginEventLinkForExisting(entry: JournalEntry) {
+        val draft = PendingEventDraft(entry.text, entry.priority, entry.log, entry.dateKey, entry.id)
+        if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
+            pendingEventDraft = draft
+            calendarPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_CALENDAR,
+                    Manifest.permission.WRITE_CALENDAR,
+                )
+            )
+            refreshJournal()
+            return
+        }
+        showCalendarPickerAndSave(draft)
     }
 
     private fun beginEventSave(
@@ -386,7 +450,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun showCalendarPickerAndSave(draft: PendingEventDraft) {
         val calendars = CalendarSyncHelper.listWritableCalendars(requireContext())
         if (calendars.isEmpty()) {
-            journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+            ensureLocalEventEntry(draft)
             refreshJournal()
             requireContext().showToast(R.string.event_calendar_none)
             return
@@ -401,22 +465,23 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             },
             onCancel = {
                 // User cancelled calendar pick — still keep the journal bullet locally.
-                journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+                ensureLocalEventEntry(draft)
                 refreshJournal()
             },
         )
     }
 
+    private fun ensureLocalEventEntry(draft: PendingEventDraft): JournalEntry {
+        val existingId = draft.existingId
+        if (existingId != null) {
+            return journalStore.update(existingId, draft.text, BulletType.EVENT, draft.priority)
+                ?: journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+        }
+        return journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+    }
+
     private fun saveEventToJournalAndCalendar(draft: PendingEventDraft, calendarId: Long) {
-        val entry = journalStore.add(
-            text = draft.text,
-            type = BulletType.EVENT,
-            log = draft.log,
-            dateKey = draft.dateKey,
-            priority = draft.priority,
-            calendarId = calendarId,
-            fromCalendar = false,
-        )
+        val entry = ensureLocalEventEntry(draft)
         val eventId = CalendarSyncHelper.insertEvent(requireContext(), entry, calendarId)
         if (eventId != null) {
             journalStore.setCalendarLink(entry.id, eventId, calendarId, fromCalendar = false)

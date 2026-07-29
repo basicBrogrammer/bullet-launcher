@@ -151,6 +151,18 @@ class ScreenshotDemoTest {
     }
 
     @Test
+    fun editBullet() = capture("05d_edit_bullet", R.layout.dialog_add_bullet) { _, root ->
+        root.findViewById<TextView>(R.id.dialogTitle).setText(R.string.edit_entry)
+        root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
+        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
+        root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
+        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.findViewById<TextView>(R.id.deleteButton).visibility = View.VISIBLE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
     fun addBulletEventSelected() = capture("05b_add_bullet_event", R.layout.dialog_add_bullet) { _, root ->
         root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
         root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
