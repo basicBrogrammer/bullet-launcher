@@ -216,7 +216,11 @@
     <string name="choose_calendar">Calendar</string>
     <string name="choose_calendar_subtitle">Which calendar should this event sync to?</string>
     <string name="event_calendar_none">No writable calendars found</string>
+    <string name="calendar_events">Calendar events</string>
     <string name="calendar_events_imported">Calendar events updated</string>
+    <string name="calendar_events_imported_count">%d calendar events shown in your journal</string>
+    <string name="calendar_events_none">No upcoming calendar events found</string>
+    <string name="calendar_events_hidden">Calendar events hidden from journal</string>
     <string name="add_bullet">Add bullet</string>
     <string name="index_daily_row">01    Daily Log</string>
     <string name="index_monthly_row">02    Monthly Log</string>

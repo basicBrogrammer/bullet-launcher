@@ -103,7 +103,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             requireContext().showToast(R.string.event_calendar_permission_needed)
             return@registerForActivityResult
         }
-        pullCalendarEventsIntoJournal()
+        prefs.showCalendarEvents = true
+        pullCalendarEventsIntoJournal(showToast = draft == null)
         if (draft != null) {
             pendingEventDraft = null
             showCalendarPickerAndSave(draft)
@@ -135,6 +136,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         }
         journalStore = JournalStore(requireContext())
         journalStore.ensureSampleData()
+        // Prior versions enabled inbound sync solely via calendar permission.
+        if (!prefs.hasShowCalendarEventsPref &&
+            CalendarSyncHelper.hasCalendarPermissions(requireContext())
+        ) {
+            prefs.showCalendarEvents = true
+        }
         initJournalPager()
         initObservers()
         setHomeAlignment(prefs.homeAlignment)
@@ -485,6 +492,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val eventId = CalendarSyncHelper.insertEvent(requireContext(), entry, calendarId)
         if (eventId != null) {
             journalStore.setCalendarLink(entry.id, eventId, calendarId, fromCalendar = false)
+            prefs.showCalendarEvents = true
             requireContext().showToast(R.string.event_synced_to_calendar)
         } else {
             requireContext().showToast(R.string.event_calendar_sync_failed)
@@ -493,10 +501,21 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         refreshJournal()
     }
 
-    private fun pullCalendarEventsIntoJournal() {
+    private fun pullCalendarEventsIntoJournal(showToast: Boolean = false) {
         if (!::journalStore.isInitialized) return
+        if (!prefs.showCalendarEvents) return
         if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) return
-        CalendarSyncHelper.syncIntoJournal(requireContext(), journalStore)
+        val result = CalendarSyncHelper.syncIntoJournal(requireContext(), journalStore)
+        if (showToast) {
+            when {
+                result.importedOrUpdated > 0 ->
+                    requireContext().showToast(
+                        getString(R.string.calendar_events_imported_count, result.importedOrUpdated)
+                    )
+                else -> requireContext().showToast(R.string.calendar_events_none)
+            }
+        }
+        if (result.changed) refreshJournal()
     }
 
     private fun toggleJournalEntry(entry: JournalEntry) {
