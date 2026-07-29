@@ -12,4 +12,5 @@
     <attr name="dialogShadeColor" format="color" />
     <attr name="primaryShadeDarkColor" format="color" />
     <attr name="drawerBackgroundColor" format="color" />
+    <attr name="homeScrimColor" format="color" />
 </resources>

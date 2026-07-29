@@ -15,15 +15,26 @@
         android:layout_height="1dp"
         android:contentDescription="@string/lock_layout_description" />
 
-    <!-- Clock and calendar-->
+    <!-- Smoky surface between wallpaper and home text -->
+    <View
+        android:id="@+id/homeScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/homeScrimColor"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <!-- Time (left) + monochrome weather (right) above the journal -->
     <LinearLayout
         android:id="@+id/dateTimeLayout"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
+        android:layout_marginHorizontal="48dp"
         android:layout_marginTop="48dp"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -34,19 +45,33 @@
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-light"
             android:format12Hour="h:mm"
+            android:format24Hour="HH:mm"
             android:textSize="@dimen/time_size"
             tools:text="02:34" />
 
         <TextView
             android:id="@+id/date"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/weather"
             style="@style/TextDefault"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:format12Hour="EEE, dd MMM"
-            android:format24Hour="EEE, dd MMM"
-            android:paddingHorizontal="3dp"
+            android:fontFamily="sans-serif-light"
+            android:gravity="end"
+            android:maxLines="1"
             android:textSize="@dimen/date_size"
-            tools:text="Thu, 30 Dec" />
+            android:visibility="gone"
+            tools:text="72° Clear"
+            tools:visibility="visible" />
     </LinearLayout>
 
     <!-- Screen time-->

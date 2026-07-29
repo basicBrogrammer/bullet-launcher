@@ -12,6 +12,7 @@ import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
 import app.olauncher.data.JournalLog
 import app.olauncher.data.JournalStore
+import app.olauncher.data.Prefs
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -226,12 +227,28 @@ object CalendarSyncHelper {
      * Pulls device/Google Calendar events into the journal and removes journal
      * events whose calendar counterparts were deleted. Returns true if the
      * journal changed.
+     *
+     * When [Prefs.syncedCalendarsConfigured] is true, only events from
+     * [Prefs.syncedCalendarIds] are imported — so the phone Calendar app can
+     * still show work/other calendars that stay out of the bullet journal.
      */
     fun syncIntoJournal(context: Context, store: JournalStore): Boolean {
         if (!hasCalendarPermissions(context)) return false
 
+        val prefs = Prefs(context)
+        val allowedCalendarIds = if (prefs.syncedCalendarsConfigured) {
+            prefs.syncedCalendarIds
+        } else {
+            null // null = all visible calendars
+        }
+        if (allowedCalendarIds != null && allowedCalendarIds.isEmpty()) {
+            // User explicitly chose none — remove previously synced events in window.
+            return removeUnselectedSyncedEvents(store, emptySet(), syncRangeMillis())
+        }
+
         val (rangeStart, rangeEnd) = syncRangeMillis()
         val remotes = queryInstances(context, rangeStart, rangeEnd)
+            .filter { allowedCalendarIds == null || it.calendarId in allowedCalendarIds }
         val linked = store.getAll()
             .filter { it.type == BulletType.EVENT && it.calendarEventId != null }
         val linkedByKey = linked.associateBy { syncKey(it.calendarEventId!!, it.dateKey) }
@@ -286,18 +303,44 @@ object CalendarSyncHelper {
             }
         }
 
-        // Drop journal events that disappeared from the calendar within the sync window.
+        // Drop journal events that disappeared from the calendar within the sync window,
+        // or that belong to calendars the user turned off for sync.
         for (entry in linked) {
             if (entry.id in seenEntryIds) continue
             val eventId = entry.calendarEventId ?: continue
             val key = syncKey(eventId, entry.dateKey)
             if (key in seenKeys) continue
             if (!dateKeyInSyncWindow(entry.dateKey, rangeStart, rangeEnd)) continue
+            val calendarId = entry.calendarId
+            if (allowedCalendarIds != null && calendarId != null && calendarId !in allowedCalendarIds) {
+                store.delete(entry.id)
+                changed = true
+                Log.d(TAG, "Removed journal event ${entry.id}; calendar $calendarId not selected for sync")
+                continue
+            }
             store.delete(entry.id)
             changed = true
             Log.d(TAG, "Removed journal event ${entry.id}; calendar event $eventId gone")
         }
 
+        return changed
+    }
+
+    private fun removeUnselectedSyncedEvents(
+        store: JournalStore,
+        allowedCalendarIds: Set<Long>,
+        range: Pair<Long, Long>,
+    ): Boolean {
+        val (rangeStart, rangeEnd) = range
+        var changed = false
+        for (entry in store.getAll().filter { it.type == BulletType.EVENT && it.calendarEventId != null }) {
+            if (!dateKeyInSyncWindow(entry.dateKey, rangeStart, rangeEnd)) continue
+            val calendarId = entry.calendarId
+            if (calendarId == null || calendarId !in allowedCalendarIds) {
+                store.delete(entry.id)
+                changed = true
+            }
+        }
         return changed
     }
 

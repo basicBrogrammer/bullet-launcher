@@ -32,4 +32,8 @@
     <color name="drawerBackgroundLight">#F3EEE6</color>
     <color name="drawerBackgroundDark">#2C2C2E</color>
 
+    <!-- Smoky home backdrop between wallpaper and text -->
+    <color name="homeScrimLight">#4D000000</color>
+    <color name="homeScrimDark">#73000000</color>
+
 </resources>

@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.res.Configuration
-import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.view.DragEvent
@@ -28,6 +27,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.setPadding
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import app.olauncher.MainViewModel
 import app.olauncher.R
@@ -41,6 +41,7 @@ import app.olauncher.data.JournalStore
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
 import app.olauncher.helper.CalendarSyncHelper
+import app.olauncher.helper.WeatherHelper
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
@@ -60,9 +61,7 @@ import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlinx.coroutines.launch
 
 class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListener {
 
@@ -74,6 +73,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private var journalPagerAdapter: JournalPagerAdapter? = null
     /** Draft Event waiting for calendar permission / picker before it is saved. */
     private var pendingEventDraft: PendingEventDraft? = null
+    private var locationPermissionRequested = false
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -110,6 +110,18 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         }
     }
 
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val granted = grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
+            grants[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        if (granted) {
+            refreshWeather()
+        } else {
+            binding.weather.isVisible = false
+        }
+    }
+
     private val homeAppViewIds = listOf(
         R.id.homeApp1, R.id.homeApp2, R.id.homeApp3, R.id.homeApp4, R.id.homeApp5,
         R.id.homeApp6, R.id.homeApp7, R.id.homeApp8, R.id.homeApp9, R.id.homeApp10,
@@ -137,7 +149,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         journalStore.ensureSampleData()
         initJournalPager()
         initObservers()
-        setHomeAlignment(prefs.homeAlignment)
+        applyHomeScrim()
         initSwipeTouchListener()
         initClickListeners()
         initHomeAppsSheet()
@@ -176,7 +188,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             // Home button for recents feature disabled
             // R.id.recents -> {}
             R.id.clock -> openClockApp()
-            R.id.date -> openCalendarApp()
+            R.id.weather -> openCalendarApp()
             R.id.setDefaultLauncher -> viewModel.resetLauncherLiveData.call()
             R.id.tvScreenTime -> openScreenTimeDigitalWellbeing()
             R.id.addBulletButton -> showAddBulletDialog()
@@ -233,7 +245,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 prefs.clockAppUser = ""
             }
 
-            view.id == R.id.date -> {
+            view.id == R.id.weather -> {
                 showAppList(Constants.FLAG_SET_CALENDAR_APP)
                 prefs.calendarAppPackage = ""
                 prefs.calendarAppClassName = ""
@@ -277,15 +289,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                     viewModel.cancelWallpaperWorker()
                 }
                 prefs.homeBottomAlignment = false
-                setHomeAlignment()
             }
             binding.setDefaultLauncher.isVisible = it.not() && prefs.hideSetDefaultLauncher.not()
         })
-        viewModel.homeAppAlignment.observe(viewLifecycleOwner) {
-            setHomeAlignment(it)
-        }
         viewModel.toggleDateTime.observe(viewLifecycleOwner) {
             populateDateTime()
+            updateAddButtonMargin()
         }
         viewModel.screenTimeValue.observe(viewLifecycleOwner) {
             it?.let { binding.tvScreenTime.text = it }
@@ -309,9 +318,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         // Home button for recents feature disabled
         // binding.recents.setOnClickListener(this)
         binding.clock.setOnClickListener(this)
-        binding.date.setOnClickListener(this)
+        binding.weather.setOnClickListener(this)
         binding.clock.setOnLongClickListener(this)
-        binding.date.setOnLongClickListener(this)
+        binding.weather.setOnLongClickListener(this)
         binding.setDefaultLauncher.setOnClickListener(this)
         binding.setDefaultLauncher.setOnLongClickListener(this)
         binding.tvScreenTime.setOnClickListener(this)
@@ -519,26 +528,56 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         refreshJournal()
     }
 
-    private fun setHomeAlignment(horizontalGravity: Int = prefs.homeAlignment) {
-        binding.dateTimeLayout.gravity = horizontalGravity
+    private fun applyHomeScrim() {
+        binding.homeScrim.isVisible = prefs.homeScrimEnabled
     }
 
     private fun populateDateTime() {
-        binding.dateTimeLayout.isVisible = prefs.dateTimeVisibility != Constants.DateTime.OFF
-        binding.clock.isVisible = Constants.DateTime.isTimeVisible(prefs.dateTimeVisibility)
-        binding.date.isVisible = Constants.DateTime.isDateVisible(prefs.dateTimeVisibility)
+        val showClock = prefs.dateTimeVisibility != Constants.DateTime.OFF
+        binding.dateTimeLayout.isVisible = showClock
+        binding.clock.isVisible = showClock
+        binding.date.isVisible = false
 
-//        var dateText = SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date())
-        val dateFormat = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
-        var dateText = dateFormat.format(Date())
-
-        if (!prefs.showStatusBar) {
-            val battery = (requireContext().getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
-                .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-            if (battery > 0)
-                dateText = getString(R.string.day_battery, dateText, battery)
+        if (showClock) {
+            WeatherHelper.cachedDisplayText(prefs)?.let { text ->
+                binding.weather.text = text
+                binding.weather.isVisible = true
+            }
+            ensureWeatherPermissionAndRefresh()
+        } else {
+            binding.weather.isVisible = false
         }
-        binding.date.text = dateText.replace(".,", ",")
+        updateAddButtonMargin()
+    }
+
+    private fun ensureWeatherPermissionAndRefresh() {
+        if (WeatherHelper.hasLocationPermission(requireContext())) {
+            refreshWeather()
+            return
+        }
+        // Ask once per process session when the clock header is visible.
+        if (!locationPermissionRequested) {
+            locationPermissionRequested = true
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                )
+            )
+        }
+    }
+
+    private fun refreshWeather() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val text = WeatherHelper.refresh(requireContext(), prefs)
+            if (!isAdded || _binding == null) return@launch
+            if (text.isNullOrBlank() || prefs.dateTimeVisibility == Constants.DateTime.OFF) {
+                binding.weather.isVisible = false
+            } else {
+                binding.weather.text = text
+                binding.weather.isVisible = true
+            }
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -550,11 +589,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val horizontalMargin = if (isLandscape) 64.dpToPx() else 10.dpToPx()
-        val marginTop = if (isLandscape) {
-            if (prefs.dateTimeVisibility == Constants.DateTime.DATE_ONLY) 36.dpToPx() else 56.dpToPx()
-        } else {
-            if (prefs.dateTimeVisibility == Constants.DateTime.DATE_ONLY) 45.dpToPx() else 72.dpToPx()
-        }
+        val marginTop = if (isLandscape) 56.dpToPx() else 72.dpToPx()
         val params = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
@@ -562,7 +597,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             topMargin = marginTop
             marginStart = horizontalMargin
             marginEnd = horizontalMargin
-            gravity = if (prefs.homeAlignment == Gravity.END) Gravity.START else Gravity.END
+            // Keep screen time away from the weather on the right edge.
+            gravity = Gravity.START
         }
         binding.tvScreenTime.layoutParams = params
         binding.tvScreenTime.setPadding(10.dpToPx())
@@ -570,18 +606,15 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun populateHomeScreen(appCountUpdated: Boolean) {
         if (appCountUpdated) hideHomeApps()
+        applyHomeScrim()
         populateDateTime()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             populateScreenTime()
 
-        val homeAppsNum = prefs.homeAppsNum
-        binding.homeAppsBottomSheet.isVisible = homeAppsNum > 0
-        if (homeAppsNum == 0) {
-            closeAppDrawerOverlay()
-            updateAddButtonMargin()
-            return
-        }
+        // Always show the 5×3 home apps sheet (Olauncher home-app-count setting removed).
+        if (prefs.homeAppsNum <= 0) prefs.homeAppsNum = Constants.MAX_HOME_APPS
+        binding.homeAppsBottomSheet.isVisible = true
 
         // Fill all 15 slots; collapsed sheet then hides rows 2–3.
         for (location in 1..Constants.MAX_HOME_APPS) {
@@ -671,11 +704,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.addBulletButton.layoutParams = params
         val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
         pagerParams.bottomMargin = pagerMargin
-        val topMargin = if (binding.dateTimeLayout.isVisible) {
-            if (binding.clock.isVisible) 140.dpToPx() else 100.dpToPx()
-        } else {
-            48.dpToPx()
-        }
+        val topMargin = if (binding.dateTimeLayout.isVisible) 110.dpToPx() else 48.dpToPx()
         pagerParams.topMargin = topMargin
         binding.journalPager.layoutParams = pagerParams
     }

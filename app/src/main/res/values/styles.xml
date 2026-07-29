@@ -43,6 +43,7 @@
         <item name="primaryShadeDarkColor">@color/blackInverseTrans25</item>
         <item name="dialogShadeColor">@color/blackInverseTrans50</item>
         <item name="drawerBackgroundColor">@color/drawerBackgroundLight</item>
+        <item name="homeScrimColor">@color/homeScrimLight</item>
 
     </style>
 
