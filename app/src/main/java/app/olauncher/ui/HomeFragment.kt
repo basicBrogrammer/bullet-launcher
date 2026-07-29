@@ -1017,7 +1017,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             override fun onSwipeUp() {
                 super.onSwipeUp()
                 if (binding.appDrawerOverlay.isVisible) return
-                showAppList(Constants.FLAG_LAUNCH_APP)
+                if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
             }
 
             override fun onSwipeDown() {
@@ -1068,7 +1068,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             override fun onSwipeUp() {
                 super.onSwipeUp()
                 if (binding.appDrawerOverlay.isVisible) return
-                showAppList(Constants.FLAG_LAUNCH_APP)
+                if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
             }
 
             override fun onSwipeDown() {
