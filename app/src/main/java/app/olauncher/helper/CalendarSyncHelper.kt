@@ -25,7 +25,7 @@ import java.util.TimeZone
 object CalendarSyncHelper {
 
     private const val TAG = "CalendarSync"
-    private const val EVENT_DESCRIPTION = "Added from Olauncher journal"
+    private const val EVENT_DESCRIPTION = "Added from Bullet Launcher journal"
     /** Pull events from the start of the previous month through N months ahead. */
     private const val SYNC_MONTHS_AHEAD = 6
 
