@@ -191,7 +191,7 @@ class JournalStore(context: Context) {
             calendarId = calendarId,
             fromCalendar = fromCalendar,
             tags = if (type == BulletType.TASK) sanitizeTags(tags) else emptyList(),
-            timeMinutes = if (type == BulletType.EVENT) timeMinutes else null,
+            timeMinutes = timeMinutes?.takeIf { it in 0..1439 },
         )
         val updated = getAll().toMutableList().apply { add(entry) }
         saveAll(updated)
@@ -235,9 +235,8 @@ class JournalStore(context: Context) {
             log = log ?: current.log,
             dateKey = dateKey ?: current.dateKey,
             timeMinutes = when {
-                type != BulletType.EVENT -> null
                 clearTime -> null
-                timeMinutes != null -> timeMinutes
+                timeMinutes != null -> timeMinutes.takeIf { it in 0..1439 }
                 else -> current.timeMinutes
             },
         )
