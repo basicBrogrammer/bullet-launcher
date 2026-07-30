@@ -1,34 +1,69 @@
-![Olauncher](https://repository-images.githubusercontent.com/278638069/db0acb80-661b-11eb-803e-926cae5dccb4)
+# Bullet Launcher
 
+A minimal Android home-screen launcher built around a **bullet journal**. Your home screen is the Daily Log — rapid-log tasks, events, and notes, then reach apps from a bottom dock.
 
-# Olauncher | Minimal AF Launcher
-AF stands for Ad-Free
+[Download the debug APK](https://github.com/basicBrogrammer/bullet-launcher/raw/master/artifacts/bullet-launcher-debug.apk) · package `app.bulletlauncher.debug`
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-    alt="Get it on F-Droid"
-    height="80">](https://f-droid.org/packages/app.olauncher)
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
-    alt="Get it on Play Store"
-    height="80">](https://play.google.com/store/apps/details?id=app.olauncher)
+## Guided walkthrough
 
-### Install using [F-Droid](https://f-droid.org/packages/app.olauncher), [Play Store](https://play.google.com/store/apps/details?id=app.olauncher) or the [latest APK](https://github.com/tanujnotes/Olauncher/releases/).
+First launch seeds sample tasks, events, and tip notes so you can explore the journal immediately. Watch the tour:
 
-- To maintain the simplicity of the launcher, a few niche features are available but hidden.
+[![Guided walkthrough](artifacts/media/guided-walkthrough.mp4)](artifacts/media/guided-walkthrough.mp4)
 
-- Please check out the **[About](https://tanujnotes.substack.com/p/olauncher-minimal-af-launcher?utm_source=github)** page in the Olauncher settings for a complete list of features and **FAQs**.
+<video src="artifacts/media/guided-walkthrough.mp4" controls width="360" poster="">
+  <a href="artifacts/media/guided-walkthrough.mp4">Download / play the guided walkthrough</a>
+</video>
 
-##
+## How it works
 
-License: [GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
+### Bullet journal home
 
-Dev: [X/twitter](https://x.com/tanujnotes) • [Bluesky](https://bsky.app/profile/tanujnotes.bsky.social)
+Home is a horizontal pager: **Monthly · Daily · Future**.
 
-##
+| Symbol | Type | Behavior |
+|--------|------|----------|
+| `•` | Task | Tap to complete · long-press to edit |
+| `○` | Event | Optional time · two-way calendar sync |
+| `–` | Note | Thoughts and tips |
+| `★` | Priority | Signifier next to important tasks |
 
-### My other apps:
+- **FAB `+`** adds a bullet (type, schedule, tags).
+- **Long-press** opens Edit entry (Save / Delete) — never deletes immediately.
+- **Index** lists Unscheduled and tag collections (e.g. Personal, Work).
 
-- [Pro Launcher](https://play.google.com/store/apps/details?id=app.prolauncher) - Pro version of Olauncher with extra features like widgets, weather, folders, etc.
+### Home apps & gestures
 
-- [Note to Self](https://play.google.com/store/apps/details?id=com.makenotetoself) - Free and [open source](https://github.com/jeerovan/ntsapp) notes app with chat like interface and end-to-end encryption.
+- Bottom dock: **5 columns × up to 3 rows** (collapsed = 1 row). Slot 13 is the **app drawer** button.
+- **Swipe up** expands the home apps sheet only (never opens the full drawer).
+- **Full app drawer** opens only from the drawer button (overlay so dock stays droppable).
+- **Swipe down** closes the drawer, or collapses the sheet; notification/search swipe-down only when both are closed.
+- **Back** closes the drawer; **Home** closes the drawer and returns to the Daily log.
 
-- [Pentastic](https://play.google.com/store/apps/details?id=app.pentastic) - Minimal todo lists. Free and [open source](https://github.com/tanujnotes/Pentastic).
+### Calendar sync
+
+Event bullets can sync both ways with the device / Google Calendar. Choose which calendars appear in Settings → Calendars to sync.
+
+## Install
+
+1. [Download the debug APK](https://github.com/basicBrogrammer/bullet-launcher/raw/master/artifacts/bullet-launcher-debug.apk)
+2. Allow installs from unknown sources if prompted
+3. Install, then set **Bullet Launcher** as the default Home app when Android asks
+
+Debug builds use package `app.bulletlauncher.debug` and are signed with the Android debug keystore (sideload only).
+
+## Build
+
+```bash
+./gradlew assembleDebug
+# APK → app/build/outputs/apk/debug/app-debug.apk
+```
+
+Visual demo screenshots (no emulator): `./gradlew :app:renderDemoScreens`
+
+## Credits
+
+Bullet Launcher started from **[Olauncher](https://github.com/tanujnotes/Olauncher)** by [tanujnotes](https://github.com/tanujnotes) — a minimal, ad-free Android launcher. We’re reshaping that foundation into a bullet-journal home screen while keeping the same spirit of simplicity.
+
+## License
+
+[GNU GPLv3](LICENSE)

@@ -63,11 +63,12 @@ class ScreenshotDemoTest {
         recycler.adapter = adapter
         adapter.submit(
             listOf(
-                demoEntry("Morning pages", BulletType.TASK, priority = true),
-                demoEntry("Team standup · 10:00", BulletType.EVENT),
-                demoEntry("Dentist · 15:30", BulletType.EVENT),
-                demoEntry("Idea: simplify home gestures", BulletType.NOTE),
-                demoEntry("Review monthly goals", BulletType.TASK),
+                demoEntry("Morning pages", BulletType.TASK, priority = true, tags = listOf("Personal")),
+                demoEntry("Team standup", BulletType.EVENT, timeMinutes = 10 * 60),
+                demoEntry("Tip: tap a task to complete · long-press to edit", BulletType.NOTE),
+                demoEntry("Idea: swipe between Monthly · Daily · Future", BulletType.NOTE),
+                demoEntry("Review monthly goals", BulletType.TASK, tags = listOf("Work")),
+                demoEntry("Dentist", BulletType.EVENT, timeMinutes = 15 * 60 + 30),
             ).map { JournalListItem.Bullet(it) }
         )
         root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
@@ -381,17 +382,17 @@ class ScreenshotDemoTest {
             (bottomPad * density).toInt(),
         )
         journal.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
-        journal.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
+        journal.findViewById<TextView>(R.id.logSubtitle).text = "Thu, 30 Jul"
         val recycler = journal.findViewById<RecyclerView>(R.id.bulletList)
         recycler.layoutManager = LinearLayoutManager(activity)
         val adapter = JournalBulletAdapter({}, {})
         recycler.adapter = adapter
         adapter.submit(
             listOf(
-                demoEntry("Morning pages", BulletType.TASK, priority = true),
-                demoEntry("Team standup", BulletType.EVENT),
-                demoEntry("Idea: simplify home gestures", BulletType.NOTE),
-                demoEntry("Review monthly goals", BulletType.TASK),
+                demoEntry("Morning pages", BulletType.TASK, priority = true, tags = listOf("Personal")),
+                demoEntry("Team standup", BulletType.EVENT, timeMinutes = 10 * 60),
+                demoEntry("Tip: tap a task to complete · long-press to edit", BulletType.NOTE),
+                demoEntry("Review monthly goals", BulletType.TASK, tags = listOf("Work")),
             ).map { JournalListItem.Bullet(it) }
         )
         journal.findViewById<View>(R.id.emptyHint).visibility = View.GONE
@@ -509,6 +510,7 @@ class ScreenshotDemoTest {
         log: JournalLog = JournalLog.DAILY,
         day: String = "2026-07-27",
         tags: List<String> = emptyList(),
+        timeMinutes: Int? = null,
     ) = JournalEntry(
         id = text,
         text = text,
@@ -518,6 +520,7 @@ class ScreenshotDemoTest {
         priority = priority,
         completed = completed,
         tags = tags,
+        timeMinutes = timeMinutes,
     )
 
     /** Synthetic colored icon; ImageView B&W filter turns it monochrome for demos. */
