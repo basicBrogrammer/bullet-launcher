@@ -524,6 +524,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                         dateKey = dateKey,
                         priority = result.priority,
                         tags = result.tags,
+                        timeMinutes = result.timeMinutes,
                     )
                     refreshJournal()
                 }
@@ -594,7 +595,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             log = log,
             dateKey = dateKey,
             timeMinutes = timeMinutes,
-            clearTime = type != BulletType.EVENT || timeMinutes == null,
+            clearTime = timeMinutes == null,
         ) ?: return
 
         when {
