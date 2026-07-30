@@ -244,6 +244,10 @@ object CalendarSyncHelper {
      * When [Prefs.syncedCalendarsConfigured] is true, only events from
      * [Prefs.syncedCalendarIds] are imported — so the phone Calendar app can
      * still show work/other calendars that stay out of the bullet journal.
+     *
+     * Recurring (RRULE) events are imported for the current month's Daily log
+     * but never into the Future log, which is reserved for one-off upcoming
+     * events. Previously imported Future repeats are removed on the next sync.
      */
     fun syncIntoJournal(context: Context, store: JournalStore): Boolean {
         if (!hasCalendarPermissions(context)) return false
@@ -272,11 +276,18 @@ object CalendarSyncHelper {
         val seenEntryIds = mutableSetOf<String>()
         val currentMonth = store.currentMonthKey()
 
+        // Future Log should only show one-off calendar events — recurring series
+        // (standup, birthdays, etc.) clutter the looking-ahead months.
+        val futureCandidateIds = remotes.mapNotNullTo(mutableSetOf()) { remote ->
+            val monthKey = dayKeyForEvent(remote.beginMillis, remote.allDay).take(7)
+            if (monthKey > currentMonth) remote.eventId else null
+        }
+        val recurringFutureIds = recurringEventIds(context, futureCandidateIds)
+
         for (remote in remotes) {
             val title = remote.title.ifBlank { "Event" }
             val dateKey = dayKeyForEvent(remote.beginMillis, remote.allDay)
             val key = syncKey(remote.eventId, dateKey)
-            seenKeys.add(key)
 
             val text = formatEventText(title, remote.beginMillis, remote.allDay)
             val monthKey = dateKey.take(7)
@@ -284,6 +295,13 @@ object CalendarSyncHelper {
                 monthKey > currentMonth -> JournalLog.FUTURE to monthKey
                 else -> JournalLog.DAILY to dateKey
             }
+
+            // Skip repeat events on the Future log (still sync current-month instances).
+            if (log == JournalLog.FUTURE && remote.eventId in recurringFutureIds) {
+                continue
+            }
+
+            seenKeys.add(key)
 
             val existing = findLinkedEntry(
                 linkedByKey = linkedByKey,
@@ -483,20 +501,37 @@ object CalendarSyncHelper {
         }
     }
 
-    private fun isRecurringEvent(context: Context, eventId: Long): Boolean {
+    private fun isRecurringEvent(context: Context, eventId: Long): Boolean =
+        eventId in recurringEventIds(context, setOf(eventId))
+
+    /**
+     * Returns the subset of [eventIds] that have a non-blank RRULE (repeating series).
+     * Batched so Future-log filtering does not query once per instance.
+     */
+    private fun recurringEventIds(context: Context, eventIds: Set<Long>): Set<Long> {
+        if (eventIds.isEmpty()) return emptySet()
         return try {
+            val idList = eventIds.joinToString(",")
             context.contentResolver.query(
-                ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
-                arrayOf(CalendarContract.Events.RRULE),
-                null,
+                CalendarContract.Events.CONTENT_URI,
+                arrayOf(CalendarContract.Events._ID, CalendarContract.Events.RRULE),
+                "${CalendarContract.Events._ID} IN ($idList)",
                 null,
                 null,
             )?.use { cursor ->
-                if (!cursor.moveToFirst()) return false
-                !cursor.getString(0).isNullOrBlank()
-            } ?: false
-        } catch (_: Exception) {
-            false
+                val idIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events._ID)
+                val rruleIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events.RRULE)
+                buildSet {
+                    while (cursor.moveToNext()) {
+                        if (!cursor.getString(rruleIdx).isNullOrBlank()) {
+                            add(cursor.getLong(idIdx))
+                        }
+                    }
+                }
+            } ?: emptySet()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to query recurring event ids", e)
+            emptySet()
         }
     }
 

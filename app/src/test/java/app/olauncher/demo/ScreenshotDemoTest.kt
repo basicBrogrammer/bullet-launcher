@@ -239,7 +239,8 @@ class ScreenshotDemoTest {
         root.findViewById<View>(R.id.tagsSection).visibility = View.VISIBLE
         root.findViewById<View>(R.id.calendarSection).visibility = View.GONE
         root.findViewById<EditText>(R.id.entryInput).setText("Morning pages")
-        root.findViewById<TextView>(R.id.scheduleValue).setText(R.string.schedule_unscheduled)
+        root.findViewById<TextView>(R.id.scheduleValue).text = "Wed, 30 Jul · 9:00 AM"
+        root.findViewById<TextView>(R.id.scheduleClear).visibility = View.VISIBLE
         val tags = root.findViewById<android.widget.LinearLayout>(R.id.tagChipGroup)
         listOf("#Personal", "#Work").forEachIndexed { index, label ->
             tags.addView(
@@ -263,6 +264,8 @@ class ScreenshotDemoTest {
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
         root.findViewById<View>(R.id.tagsSection).visibility = View.GONE
         root.findViewById<View>(R.id.calendarSection).visibility = View.VISIBLE
+        root.findViewById<TextView>(R.id.scheduleValue).text = "Wed, 30 Jul · 10:30 AM"
+        root.findViewById<TextView>(R.id.scheduleClear).visibility = View.VISIBLE
         root.findViewById<TextView>(R.id.deleteButton).visibility = View.VISIBLE
         root.setBackgroundColor(Color.WHITE)
     }
@@ -273,6 +276,8 @@ class ScreenshotDemoTest {
         root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
         root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
+        root.findViewById<TextView>(R.id.scheduleValue).text = "Wed, 30 Jul · 10:30 AM"
+        root.findViewById<TextView>(R.id.scheduleClear).visibility = View.VISIBLE
         root.findViewById<View>(R.id.tagsSection).visibility = View.GONE
         root.findViewById<View>(R.id.calendarSection).visibility = View.VISIBLE
         val spinner = root.findViewById<android.widget.Spinner>(R.id.calendarSpinner)

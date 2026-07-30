@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.app.Dialog
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
@@ -47,7 +48,7 @@ object AddBulletDialog {
         val calendarId: Long?,
         /** yyyy-MM-dd when scheduled; null = Unscheduled. */
         val scheduledDateKey: String?,
-        /** Minutes from midnight for timed events; null = all-day / none. */
+        /** Minutes from midnight when timed; null = all-day / none. */
         val timeMinutes: Int?,
     )
 
@@ -235,26 +236,38 @@ object AddBulletDialog {
 
         fun openTimePicker() {
             val initial = scheduledTimeMinutes
-            val hour = initial?.div(60) ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-            val minute = initial?.rem(60) ?: 0
+            val now = Calendar.getInstance()
+            val hour = initial?.div(60) ?: now.get(Calendar.HOUR_OF_DAY)
+            val minute = initial?.rem(60) ?: now.get(Calendar.MINUTE)
+            fun applyAllDay() {
+                scheduledTimeMinutes = null
+                refreshScheduleLabel()
+                clampSheetHeight()
+            }
             TimePickerDialog(
                 context,
                 { _, h, m ->
                     scheduledTimeMinutes = h * 60 + m
                     refreshScheduleLabel()
+                    clampSheetHeight()
                 },
                 hour,
                 minute,
                 false,
             ).apply {
-                setOnCancelListener {
-                    // Keep the date; leave time unset (all-day).
-                    if (scheduledTimeMinutes == null) refreshScheduleLabel()
+                // Replace Cancel so choosing no time is an explicit "all day".
+                setButton(
+                    DialogInterface.BUTTON_NEGATIVE,
+                    context.getString(R.string.schedule_all_day),
+                ) { dialog, _ ->
+                    applyAllDay()
+                    dialog.dismiss()
                 }
+                setOnCancelListener { applyAllDay() }
             }.show()
         }
 
-        fun openDatePicker() {
+        fun openDateTimePicker() {
             val initial = scheduledDate ?: Calendar.getInstance()
             DatePickerDialog(
                 context,
@@ -263,14 +276,9 @@ object AddBulletDialog {
                         set(year, month, day, 0, 0, 0)
                         set(Calendar.MILLISECOND, 0)
                     }
-                    if (selectedType != BulletType.EVENT) {
-                        scheduledTimeMinutes = null
-                    }
                     refreshScheduleLabel()
-                    if (selectedType == BulletType.EVENT) {
-                        openTimePicker()
-                    }
-                    clampSheetHeight()
+                    // Date then time — canceling time keeps an all-day schedule.
+                    openTimePicker()
                 },
                 initial.get(Calendar.YEAR),
                 initial.get(Calendar.MONTH),
@@ -278,7 +286,7 @@ object AddBulletDialog {
             ).show()
         }
 
-        scheduleValue.setOnClickListener { openDatePicker() }
+        scheduleValue.setOnClickListener { openDateTimePicker() }
         scheduleClear.setOnClickListener {
             scheduledDate = null
             scheduledTimeMinutes = null
@@ -391,10 +399,6 @@ object AddBulletDialog {
                 if (selectedType == BulletType.TASK) View.VISIBLE else View.GONE
             calendarSection.visibility =
                 if (selectedType == BulletType.EVENT) View.VISIBLE else View.GONE
-            if (selectedType != BulletType.EVENT) {
-                scheduledTimeMinutes = null
-                refreshScheduleLabel()
-            }
             if (dialog.isShowing) clampSheetHeight()
         }
 
@@ -447,7 +451,6 @@ object AddBulletDialog {
                 null
             }
             val dateKey = scheduledDate?.let { dayFormat.format(it.time) }
-            val time = if (selectedType == BulletType.EVENT) scheduledTimeMinutes else null
             onSave(
                 Result(
                     text = text,
@@ -456,7 +459,7 @@ object AddBulletDialog {
                     tags = tags,
                     calendarId = calendarId,
                     scheduledDateKey = dateKey,
-                    timeMinutes = time,
+                    timeMinutes = scheduledTimeMinutes,
                 )
             )
             dialog.dismiss()
