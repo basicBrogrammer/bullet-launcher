@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.app.Dialog
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
@@ -238,6 +239,11 @@ object AddBulletDialog {
             val now = Calendar.getInstance()
             val hour = initial?.div(60) ?: now.get(Calendar.HOUR_OF_DAY)
             val minute = initial?.rem(60) ?: now.get(Calendar.MINUTE)
+            fun applyAllDay() {
+                scheduledTimeMinutes = null
+                refreshScheduleLabel()
+                clampSheetHeight()
+            }
             TimePickerDialog(
                 context,
                 { _, h, m ->
@@ -249,11 +255,15 @@ object AddBulletDialog {
                 minute,
                 false,
             ).apply {
-                setOnCancelListener {
-                    // Keep the date; leave time unset (all-day) unless already set.
-                    refreshScheduleLabel()
-                    clampSheetHeight()
+                // Replace Cancel so choosing no time is an explicit "all day".
+                setButton(
+                    DialogInterface.BUTTON_NEGATIVE,
+                    context.getString(R.string.schedule_all_day),
+                ) { dialog, _ ->
+                    applyAllDay()
+                    dialog.dismiss()
                 }
+                setOnCancelListener { applyAllDay() }
             }.show()
         }
 
