@@ -61,6 +61,7 @@ import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
+import app.olauncher.listener.setWallpaperGestures
 import kotlinx.coroutines.launch
 
 class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListener {
@@ -340,11 +341,36 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             onIndex = { showIndexDialog() },
             onToggle = { entry -> toggleJournalEntry(entry) },
             onLongPress = { entry -> showEditBulletDialog(entry) },
+            onEmptyLongPress = { openSettings() },
+            onEmptySwipeUp = {
+                if (binding.appDrawerOverlay.isVisible) return@JournalPagerAdapter
+                if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
+            },
+            onEmptySwipeDown = { swipeDownAction() },
         )
         journalPagerAdapter = adapter
         binding.journalPager.adapter = adapter
         binding.journalPager.setCurrentItem(JournalPages.DAILY, false)
         binding.journalPager.offscreenPageLimit = 1
+        // Gap between clock and weather (and any uncovered header chrome).
+        binding.dateTimeLayout.setWallpaperGestures(
+            onLongPress = { openSettings() },
+            onSwipeUp = {
+                if (!binding.appDrawerOverlay.isVisible && !prefs.homeAppsSheetExpanded) {
+                    setHomeAppsSheetExpanded(true)
+                }
+            },
+            onSwipeDown = { swipeDownAction() },
+        )
+    }
+
+    private fun openSettings() {
+        try {
+            findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
+            viewModel.firstOpen(false)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun refreshJournal() {
@@ -1122,12 +1148,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
             override fun onLongClick() {
                 super.onLongClick()
-                try {
-                    findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
-                    viewModel.firstOpen(false)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                openSettings()
             }
 
             override fun onDoubleClick() {

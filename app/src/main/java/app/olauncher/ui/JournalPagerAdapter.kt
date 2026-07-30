@@ -8,9 +8,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
 import app.olauncher.data.JournalEntry
-import app.olauncher.data.JournalLog
 import app.olauncher.data.JournalPages
 import app.olauncher.data.JournalStore
+import app.olauncher.listener.EmptySpaceGestureListener
+import app.olauncher.listener.setWallpaperGestures
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -19,6 +20,9 @@ class JournalPagerAdapter(
     private val onIndex: () -> Unit,
     private val onToggle: (JournalEntry) -> Unit,
     private val onLongPress: (JournalEntry) -> Unit,
+    private val onEmptyLongPress: () -> Unit,
+    private val onEmptySwipeUp: () -> Unit = {},
+    private val onEmptySwipeDown: () -> Unit = {},
 ) : RecyclerView.Adapter<JournalPagerAdapter.PageVH>() {
 
     private val dayLabelFormat = SimpleDateFormat("d · EEE", Locale.getDefault())
@@ -52,6 +56,28 @@ class JournalPagerAdapter(
             bulletList.layoutManager = LinearLayoutManager(itemView.context)
             bulletList.adapter = adapter
             indexButton.setOnClickListener { onIndex() }
+            // Wallpaper-visible chrome / empty areas open settings on long-press.
+            listOf(logTitle, logSubtitle, emptyHint).forEach { view ->
+                view.setWallpaperGestures(
+                    onLongPress = onEmptyLongPress,
+                    onSwipeUp = onEmptySwipeUp,
+                    onSwipeDown = onEmptySwipeDown,
+                )
+            }
+            bulletList.addOnItemTouchListener(
+                EmptySpaceGestureListener(
+                    recyclerView = bulletList,
+                    onLongPress = onEmptyLongPress,
+                    onSwipeUp = onEmptySwipeUp,
+                    onSwipeDown = onEmptySwipeDown,
+                )
+            )
+            // Page padding / gaps where wallpaper shows through.
+            itemView.setWallpaperGestures(
+                onLongPress = onEmptyLongPress,
+                onSwipeUp = onEmptySwipeUp,
+                onSwipeDown = onEmptySwipeDown,
+            )
         }
 
         fun bind(page: Int) {
@@ -80,8 +106,6 @@ class JournalPagerAdapter(
             val dayKeys = store.daysInMonth(monthKey).filter { key ->
                 key <= today || byDay.containsKey(key)
             }
-            // Show remaining days of month as light sections only for days with entries,
-            // plus past/today always — keep list scannable.
             val sections = dayKeys.mapNotNull { key ->
                 val entries = byDay[key].orEmpty()
                 if (entries.isEmpty() && key != today) return@mapNotNull null
