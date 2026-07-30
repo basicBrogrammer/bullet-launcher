@@ -31,9 +31,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import app.olauncher.MainViewModel
 import app.olauncher.R
+import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.data.AppModel
 import app.olauncher.data.BulletType
 import app.olauncher.data.Constants
+import app.olauncher.data.IndexDestination
 import app.olauncher.data.JournalEntry
 import app.olauncher.data.JournalLog
 import app.olauncher.data.JournalPages
@@ -59,6 +63,7 @@ import app.olauncher.helper.openSearch
 import app.olauncher.helper.setBlackAndWhite
 import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
+import app.olauncher.listener.EmptySpaceGestureListener
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
 import app.olauncher.listener.setWallpaperGestures
@@ -72,6 +77,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var homeAppViews: List<ImageView>
     private lateinit var journalStore: JournalStore
     private var journalPagerAdapter: JournalPagerAdapter? = null
+    private var collectionBulletAdapter: JournalBulletAdapter? = null
+    private var openCollection: IndexDestination? = null
     /** Draft Event waiting for calendar permission / picker before it is saved. */
     private var pendingEventDraft: PendingEventDraft? = null
     private var locationPermissionRequested = false
@@ -86,6 +93,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val dateKey: String,
         /** When set, calendar sync attaches to this existing journal entry. */
         val existingId: String? = null,
+        val calendarId: Long? = null,
     )
 
     private val calendarPermissionLauncher = registerForActivityResult(
@@ -159,14 +167,16 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    if (binding.appDrawerOverlay.isVisible) {
-                        closeAppDrawerOverlay()
-                    } else if (binding.journalPager.currentItem != JournalPages.DAILY) {
-                        binding.journalPager.setCurrentItem(JournalPages.DAILY, true)
-                    } else {
-                        isEnabled = false
-                        requireActivity().onBackPressedDispatcher.onBackPressed()
-                        isEnabled = true
+                    when {
+                        binding.appDrawerOverlay.isVisible -> closeAppDrawerOverlay()
+                        binding.collectionOverlay.isVisible -> hideCollectionPage()
+                        binding.journalPager.currentItem != JournalPages.DAILY ->
+                            binding.journalPager.setCurrentItem(JournalPages.DAILY, true)
+                        else -> {
+                            isEnabled = false
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                            isEnabled = true
+                        }
                     }
                 }
             }
@@ -275,6 +285,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun initObservers() {
         viewModel.backToHome.observe(viewLifecycleOwner) {
             closeAppDrawerOverlay()
+            hideCollectionPage()
             if (binding.journalPager.currentItem != JournalPages.DAILY) {
                 binding.journalPager.setCurrentItem(JournalPages.DAILY, false)
             }
@@ -375,40 +386,178 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun refreshJournal() {
         journalPagerAdapter?.refresh()
+        if (binding.collectionOverlay.isVisible) {
+            refreshCollectionPage()
+        }
     }
 
     private fun showIndexDialog() {
-        IndexDialog.show(requireContext()) { page ->
-            binding.journalPager.setCurrentItem(page, true)
+        IndexDialog.show(
+            context = requireContext(),
+            tagsWithTasks = journalStore.getTagsWithTasks(),
+        ) { destination ->
+            showCollectionPage(destination)
+        }
+    }
+
+    private fun showCollectionPage(destination: IndexDestination) {
+        openCollection = destination
+        val overlay = binding.collectionOverlay
+        if (overlay.childCount == 0) {
+            val page = layoutInflater.inflate(R.layout.page_journal_log, overlay, false)
+            overlay.addView(page)
+            val bulletList = page.findViewById<RecyclerView>(R.id.bulletList)
+            val adapter = JournalBulletAdapter(
+                onToggle = { entry -> toggleJournalEntry(entry) },
+                onLongPress = { entry -> showEditBulletDialog(entry) },
+            )
+            collectionBulletAdapter = adapter
+            bulletList.layoutManager = LinearLayoutManager(requireContext())
+            bulletList.adapter = adapter
+            page.findViewById<TextView>(R.id.indexButton).setOnClickListener { showIndexDialog() }
+            listOf(
+                page.findViewById<View>(R.id.logTitle),
+                page.findViewById<View>(R.id.logSubtitle),
+                page.findViewById<View>(R.id.emptyHint),
+            ).forEach { view ->
+                view.setWallpaperGestures(
+                    onLongPress = { openSettings() },
+                    onSwipeUp = {
+                        if (!binding.appDrawerOverlay.isVisible && !prefs.homeAppsSheetExpanded) {
+                            setHomeAppsSheetExpanded(true)
+                        }
+                    },
+                    onSwipeDown = { swipeDownAction() },
+                )
+            }
+            bulletList.addOnItemTouchListener(
+                EmptySpaceGestureListener(
+                    recyclerView = bulletList,
+                    onLongPress = { openSettings() },
+                    onSwipeUp = {
+                        if (!binding.appDrawerOverlay.isVisible && !prefs.homeAppsSheetExpanded) {
+                            setHomeAppsSheetExpanded(true)
+                        }
+                    },
+                    onSwipeDown = { swipeDownAction() },
+                )
+            )
+            page.setWallpaperGestures(
+                onLongPress = { openSettings() },
+                onSwipeUp = {
+                    if (!binding.appDrawerOverlay.isVisible && !prefs.homeAppsSheetExpanded) {
+                        setHomeAppsSheetExpanded(true)
+                    }
+                },
+                onSwipeDown = { swipeDownAction() },
+            )
+        }
+        binding.journalPager.isVisible = false
+        overlay.isVisible = true
+        refreshCollectionPage()
+    }
+
+    private fun hideCollectionPage() {
+        openCollection = null
+        binding.collectionOverlay.isVisible = false
+        binding.journalPager.isVisible = true
+    }
+
+    private fun refreshCollectionPage() {
+        val destination = openCollection ?: return
+        val page = binding.collectionOverlay.getChildAt(0) ?: return
+        val title = page.findViewById<TextView>(R.id.logTitle)
+        val subtitle = page.findViewById<TextView>(R.id.logSubtitle)
+        val emptyHint = page.findViewById<TextView>(R.id.emptyHint)
+        val entries = when (destination) {
+            is IndexDestination.Unscheduled -> {
+                title.setText(R.string.unscheduled_log)
+                subtitle.setText(R.string.unscheduled_log_subtitle)
+                emptyHint.setText(R.string.journal_unscheduled_empty)
+                journalStore.getUnscheduled()
+            }
+            is IndexDestination.Tag -> {
+                title.text = destination.name
+                subtitle.setText(R.string.tag_log_subtitle)
+                emptyHint.setText(R.string.journal_tag_empty)
+                journalStore.getForTag(destination.name)
+            }
+        }
+        emptyHint.isVisible = entries.isEmpty()
+        collectionBulletAdapter?.submit(entries.map { JournalListItem.Bullet(it) })
+        // Tag with no remaining tasks — leave the page but Index will hide it next open.
+        if (destination is IndexDestination.Tag && entries.isEmpty()) {
+            // Keep showing empty state; user can Index elsewhere.
         }
     }
 
     private fun showAddBulletDialog() {
+        val calendars = CalendarSyncHelper.listEnabledWritableCalendars(requireContext(), prefs)
+        val collection = openCollection
+        val preselectedTags = when (collection) {
+            is IndexDestination.Tag -> listOf(collection.name)
+            else -> emptyList()
+        }
         AddBulletDialog.show(
             context = requireContext(),
-            onSave = { text, type, priority ->
-                val page = binding.journalPager.currentItem
-                val (log, dateKey) = when (page) {
-                    JournalPages.MONTHLY -> JournalLog.MONTHLY to journalStore.todayKey()
-                    JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
-                    else -> JournalLog.DAILY to journalStore.todayKey()
-                }
-                if (type == BulletType.EVENT) {
-                    beginEventSave(text, priority, log, dateKey)
+            existingTags = journalStore.getAllTags(),
+            calendars = calendars,
+            preferredCalendarId = prefs.preferredCalendarId,
+            preselectedTags = preselectedTags,
+            onSave = { result ->
+                val (log, dateKey) = resolveAddTarget(result.type)
+                if (result.type == BulletType.EVENT) {
+                    beginEventSave(
+                        text = result.text,
+                        priority = result.priority,
+                        log = log,
+                        dateKey = dateKey,
+                        calendarId = result.calendarId,
+                    )
                 } else {
-                    journalStore.add(text, type, log, dateKey, priority)
+                    journalStore.add(
+                        text = result.text,
+                        type = result.type,
+                        log = log,
+                        dateKey = dateKey,
+                        priority = result.priority,
+                        tags = result.tags,
+                    )
                     refreshJournal()
                 }
             },
         )
     }
 
+    private fun resolveAddTarget(type: BulletType): Pair<JournalLog, String> {
+        val collection = openCollection
+        if (collection is IndexDestination.Unscheduled && type == BulletType.TASK) {
+            return JournalLog.UNSCHEDULED to JournalPages.UNSCHEDULED_KEY
+        }
+        return when (binding.journalPager.currentItem) {
+            JournalPages.MONTHLY -> JournalLog.MONTHLY to journalStore.todayKey()
+            JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
+            else -> JournalLog.DAILY to journalStore.todayKey()
+        }
+    }
+
     private fun showEditBulletDialog(entry: JournalEntry) {
+        val calendars = CalendarSyncHelper.listEnabledWritableCalendars(requireContext(), prefs)
         AddBulletDialog.show(
             context = requireContext(),
             existing = entry,
-            onSave = { text, type, priority ->
-                saveEditedBullet(entry, text, type, priority)
+            existingTags = journalStore.getAllTags(),
+            calendars = calendars,
+            preferredCalendarId = prefs.preferredCalendarId,
+            onSave = { result ->
+                saveEditedBullet(
+                    original = entry,
+                    text = result.text,
+                    type = result.type,
+                    priority = result.priority,
+                    tags = result.tags,
+                    calendarId = result.calendarId,
+                )
             },
             onDelete = { deleteJournalEntry(entry) },
         )
@@ -419,18 +568,34 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         text: String,
         type: BulletType,
         priority: Boolean,
+        tags: List<String>,
+        calendarId: Long?,
     ) {
         val wasEvent = original.type == BulletType.EVENT
-        val updated = journalStore.update(original.id, text, type, priority) ?: return
+        val updated = journalStore.update(original.id, text, type, priority, tags) ?: return
 
         when {
-            // Newly an event (or still unlinked): offer calendar sync for this entry.
+            // Newly an event (or still unlinked): sync to the chosen calendar.
             type == BulletType.EVENT && updated.calendarEventId == null -> {
-                beginEventLinkForExisting(updated)
+                beginEventLinkForExisting(updated, calendarId)
                 return
             }
-            // Still an event with a calendar link: push title change.
+            // Still an event with a calendar link: push title change; maybe move calendar.
             type == BulletType.EVENT && updated.calendarEventId != null -> {
+                if (calendarId != null && calendarId != updated.calendarId) {
+                    // Relink by deleting + reinserting into the newly selected calendar.
+                    CalendarSyncHelper.deleteEvent(
+                        requireContext(),
+                        updated.calendarEventId,
+                        fromCalendar = updated.fromCalendar,
+                    )
+                    journalStore.setCalendarLink(updated.id, null, null, fromCalendar = false)
+                    beginEventLinkForExisting(
+                        journalStore.getById(updated.id) ?: updated,
+                        calendarId,
+                    )
+                    return
+                }
                 CalendarSyncHelper.updateEvent(requireContext(), updated)
             }
             // Was an event, now something else: drop the calendar event.
@@ -446,8 +611,15 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         refreshJournal()
     }
 
-    private fun beginEventLinkForExisting(entry: JournalEntry) {
-        val draft = PendingEventDraft(entry.text, entry.priority, entry.log, entry.dateKey, entry.id)
+    private fun beginEventLinkForExisting(entry: JournalEntry, calendarId: Long? = null) {
+        val draft = PendingEventDraft(
+            text = entry.text,
+            priority = entry.priority,
+            log = entry.log,
+            dateKey = entry.dateKey,
+            existingId = entry.id,
+            calendarId = calendarId,
+        )
         if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
             pendingEventDraft = draft
             calendarPermissionLauncher.launch(
@@ -459,7 +631,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             refreshJournal()
             return
         }
-        showCalendarPickerAndSave(draft)
+        finishEventSave(draft)
     }
 
     private fun beginEventSave(
@@ -467,8 +639,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         priority: Boolean,
         log: JournalLog,
         dateKey: String,
+        calendarId: Long? = null,
     ) {
-        val draft = PendingEventDraft(text, priority, log, dateKey)
+        val draft = PendingEventDraft(text, priority, log, dateKey, calendarId = calendarId)
         if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
             pendingEventDraft = draft
             calendarPermissionLauncher.launch(
@@ -479,17 +652,24 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             )
             return
         }
-        showCalendarPickerAndSave(draft)
+        finishEventSave(draft)
     }
 
-    private fun showCalendarPickerAndSave(draft: PendingEventDraft) {
-        val calendars = CalendarSyncHelper.listWritableCalendars(requireContext())
+    private fun finishEventSave(draft: PendingEventDraft) {
+        val calendars = CalendarSyncHelper.listEnabledWritableCalendars(requireContext(), prefs)
         if (calendars.isEmpty()) {
             ensureLocalEventEntry(draft)
             refreshJournal()
             requireContext().showToast(R.string.event_calendar_none)
             return
         }
+        val chosenId = draft.calendarId?.takeIf { id -> calendars.any { it.id == id } }
+        if (chosenId != null) {
+            prefs.preferredCalendarId = chosenId
+            saveEventToJournalAndCalendar(draft, chosenId)
+            return
+        }
+        // Fallback: previous post-save picker when no calendar was chosen in the sheet.
         CalendarPickerDialog.show(
             context = requireContext(),
             calendars = calendars,
@@ -499,11 +679,14 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 saveEventToJournalAndCalendar(draft, calendar.id)
             },
             onCancel = {
-                // User cancelled calendar pick — still keep the journal bullet locally.
                 ensureLocalEventEntry(draft)
                 refreshJournal()
             },
         )
+    }
+
+    private fun showCalendarPickerAndSave(draft: PendingEventDraft) {
+        finishEventSave(draft)
     }
 
     private fun ensureLocalEventEntry(draft: PendingEventDraft): JournalEntry {
@@ -734,6 +917,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val topMargin = if (binding.dateTimeLayout.isVisible) 92.dpToPx() else 36.dpToPx()
         pagerParams.topMargin = topMargin
         binding.journalPager.layoutParams = pagerParams
+        val collectionParams = binding.collectionOverlay.layoutParams as FrameLayout.LayoutParams
+        collectionParams.bottomMargin = pagerMargin
+        collectionParams.topMargin = topMargin
+        binding.collectionOverlay.layoutParams = collectionParams
     }
 
     private fun collapsedSheetFallbackMargin(): Int =

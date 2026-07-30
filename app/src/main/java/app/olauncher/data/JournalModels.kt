@@ -7,7 +7,7 @@ package app.olauncher.data
  * • task / to-do
  * ○ event
  * – note / thought
- * * high-priority signifier (shown next to the bullet)
+ * ★ high-priority signifier (star icon next to the bullet)
  */
 enum class BulletType(val symbol: String) {
     TASK("•"),
@@ -23,7 +23,9 @@ enum class BulletType(val symbol: String) {
 enum class JournalLog {
     DAILY,
     MONTHLY,
-    FUTURE;
+    FUTURE,
+    /** Tasks not assigned to a daily / monthly / future date. */
+    UNSCHEDULED;
 
     companion object {
         fun fromName(name: String): JournalLog =
@@ -36,7 +38,7 @@ data class JournalEntry(
     val text: String,
     val type: BulletType,
     val log: JournalLog,
-    /** Day key yyyy-MM-dd for daily/monthly; month key yyyy-MM for future. */
+    /** Day key yyyy-MM-dd for daily/monthly; month key yyyy-MM for future; blank for unscheduled. */
     val dateKey: String,
     val priority: Boolean = false,
     val completed: Boolean = false,
@@ -47,14 +49,19 @@ data class JournalEntry(
     val calendarId: Long? = null,
     /** True when this bullet was imported from the device/Google calendar. */
     val fromCalendar: Boolean = false,
+    /** Topic tags (primarily for tasks); used by the Index collections. */
+    val tags: List<String> = emptyList(),
 ) {
-    fun displaySymbol(): String {
-        val base = when {
-            type == BulletType.TASK && completed -> "×"
-            else -> type.symbol
-        }
-        return if (priority) "*$base" else base
+    fun displaySymbol(): String = when {
+        type == BulletType.TASK && completed -> "×"
+        else -> type.symbol
     }
+}
+
+/** Destinations listed by the Index (collections). */
+sealed class IndexDestination {
+    data object Unscheduled : IndexDestination()
+    data class Tag(val name: String) : IndexDestination()
 }
 
 object JournalPages {
@@ -62,4 +69,6 @@ object JournalPages {
     const val DAILY = 1
     const val FUTURE = 2
     const val COUNT = 3
+
+    const val UNSCHEDULED_KEY = "unscheduled"
 }

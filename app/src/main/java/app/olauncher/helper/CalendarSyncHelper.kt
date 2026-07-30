@@ -68,6 +68,16 @@ object CalendarSyncHelper {
     fun listWritableCalendars(context: Context): List<DeviceCalendar> =
         listCalendars(context).filter { it.canWrite }
 
+    /**
+     * Writable calendars the user enabled in Settings → Calendars to sync.
+     * When sync selection is not configured yet, all writable calendars are offered.
+     */
+    fun listEnabledWritableCalendars(context: Context, prefs: Prefs): List<DeviceCalendar> {
+        val writable = listWritableCalendars(context)
+        if (!prefs.syncedCalendarsConfigured) return writable
+        return writable.filter { it.id in prefs.syncedCalendarIds }
+    }
+
     fun listCalendars(context: Context): List<DeviceCalendar> {
         if (!hasCalendarPermissions(context)) return emptyList()
         val projection = arrayOf(

@@ -100,6 +100,18 @@
         android:layout_marginBottom="180dp"
         android:clipToPadding="false" />
 
+    <!-- Index collection page (Unscheduled / tag) overlays the pager -->
+    <FrameLayout
+        android:id="@+id/collectionOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginHorizontal="48dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginBottom="180dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
     <!-- App drawer overlay (keeps bottom sheet visible for drag-and-drop) -->
     <FrameLayout
         android:id="@+id/appDrawerOverlay"
