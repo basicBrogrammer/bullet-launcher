@@ -9,10 +9,11 @@
 
     <ImageView
         android:id="@+id/priorityStar"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:layout_marginEnd="2dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:contentDescription="@string/priority_on"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_star"
         android:visibility="gone"
         tools:visibility="visible" />

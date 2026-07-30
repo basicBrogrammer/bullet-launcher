@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
+import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
 import app.olauncher.helper.getColorFromAttr
 
@@ -106,15 +107,21 @@ class JournalBulletAdapter(
         text: TextView,
         entry: JournalEntry,
     ) {
-        symbol.text = entry.displaySymbol()
         text.text = entry.displayText()
         text.paintFlags = if (entry.completed) {
             text.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
         } else {
             text.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
         }
-        star.isVisible = entry.priority
-        if (entry.priority) {
+        // Priority uses the star as the sole marker (not star + bullet).
+        // Completed tasks still show × so status stays obvious.
+        val showStar = entry.priority && !(entry.type == BulletType.TASK && entry.completed)
+        star.isVisible = showStar
+        symbol.isVisible = !showStar
+        if (!showStar) {
+            symbol.text = entry.displaySymbol()
+        }
+        if (showStar) {
             star.setColorFilter(star.context.getColorFromAttr(R.attr.primaryColor))
         }
     }
