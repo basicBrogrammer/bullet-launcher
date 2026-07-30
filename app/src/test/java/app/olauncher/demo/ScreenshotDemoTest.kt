@@ -193,13 +193,14 @@ class ScreenshotDemoTest {
         root.findViewById<View>(R.id.tagsSection).visibility = View.VISIBLE
         root.findViewById<View>(R.id.calendarSection).visibility = View.GONE
         root.findViewById<EditText>(R.id.entryInput).setText("Morning pages")
-        val chips = root.findViewById<com.google.android.material.chip.ChipGroup>(R.id.tagChipGroup)
-        listOf("Personal", "Work").forEachIndexed { index, label ->
-            chips.addView(
-                com.google.android.material.chip.Chip(activity).apply {
+        val tags = root.findViewById<android.widget.LinearLayout>(R.id.tagChipGroup)
+        listOf("#Personal", "#Work").forEachIndexed { index, label ->
+            tags.addView(
+                TextView(activity).apply {
+                    setTextAppearance(activity, R.style.TextMedium)
                     text = label
-                    isCheckable = true
-                    isChecked = index == 0
+                    alpha = if (index == 0) 1f else 0.45f
+                    setPadding(0, 20, 0, 20)
                 }
             )
         }

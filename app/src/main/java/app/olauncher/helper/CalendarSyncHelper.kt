@@ -527,6 +527,16 @@ object CalendarSyncHelper {
                         0, 0, 0
                     )
                 }
+                JournalLog.UNSCHEDULED -> {
+                    // Unscheduled is for tasks; if an event lands here, use today.
+                    val local = Calendar.getInstance()
+                    cal.set(
+                        local.get(Calendar.YEAR),
+                        local.get(Calendar.MONTH),
+                        local.get(Calendar.DAY_OF_MONTH),
+                        0, 0, 0
+                    )
+                }
             }
             cal.set(Calendar.MILLISECOND, 0)
             val start = cal.timeInMillis

@@ -1,9 +1,15 @@
 package app.olauncher.ui
 
+import android.app.Dialog
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.EditText
@@ -11,10 +17,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import app.olauncher.R
 import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
@@ -42,9 +44,21 @@ object AddBulletDialog {
         onSave: (Result) -> Unit,
         onDelete: (() -> Unit)? = null,
     ) {
-        val dialog = BottomSheetDialog(context)
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_add_bullet, null)
         dialog.setContentView(view)
+
+        val sheetHeight = (context.resources.displayMetrics.heightPixels * 0.9f).toInt()
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, sheetHeight)
+            setGravity(Gravity.BOTTOM)
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            // Dim the journal behind the sheet.
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            attributes = attributes.apply { dimAmount = 0.45f }
+        }
 
         val title = view.findViewById<TextView>(R.id.dialogTitle)
         val input = view.findViewById<EditText>(R.id.entryInput)
@@ -52,7 +66,7 @@ object AddBulletDialog {
         val typeEvent = view.findViewById<TextView>(R.id.typeEvent)
         val typeNote = view.findViewById<TextView>(R.id.typeNote)
         val tagsSection = view.findViewById<View>(R.id.tagsSection)
-        val tagChipGroup = view.findViewById<ChipGroup>(R.id.tagChipGroup)
+        val tagList = view.findViewById<LinearLayout>(R.id.tagChipGroup)
         val newTagInput = view.findViewById<EditText>(R.id.newTagInput)
         val addTagButton = view.findViewById<TextView>(R.id.addTagButton)
         val calendarSection = view.findViewById<View>(R.id.calendarSection)
@@ -103,28 +117,30 @@ object AddBulletDialog {
             delete.visibility = View.GONE
         }
 
-        fun rebuildTagChips() {
-            tagChipGroup.removeAllViews()
+        fun rebuildTagRows() {
+            tagList.removeAllViews()
             if (knownTags.isEmpty()) {
                 val empty = TextView(context).apply {
                     setText(R.string.tags_empty_hint)
                     setTextAppearance(context, R.style.TextSmallLight)
                     setPadding(0, 8, 0, 8)
                 }
-                tagChipGroup.addView(empty)
+                tagList.addView(empty)
                 return
             }
             knownTags.forEach { (key, label) ->
-                val chip = Chip(context).apply {
-                    text = label
-                    isCheckable = true
-                    isChecked = key in selectedTags
-                    isClickable = true
-                    setOnCheckedChangeListener { _, checked ->
-                        if (checked) selectedTags.add(key) else selectedTags.remove(key)
+                val row = TextView(context).apply {
+                    setTextAppearance(context, R.style.TextMedium)
+                    typeface = android.graphics.Typeface.create("serif", android.graphics.Typeface.NORMAL)
+                    text = "#$label"
+                    setPadding(0, dp(context, 10), 0, dp(context, 10))
+                    alpha = if (key in selectedTags) selectedAlpha else dimAlpha
+                    setOnClickListener {
+                        if (key in selectedTags) selectedTags.remove(key) else selectedTags.add(key)
+                        alpha = if (key in selectedTags) selectedAlpha else dimAlpha
                     }
                 }
-                tagChipGroup.addView(chip)
+                tagList.addView(row)
             }
         }
 
@@ -134,10 +150,10 @@ object AddBulletDialog {
             rememberTag(raw)
             selectedTags.add(key)
             newTagInput.text = null
-            rebuildTagChips()
+            rebuildTagRows()
         }
 
-        rebuildTagChips()
+        rebuildTagRows()
         addTagButton.setOnClickListener { addNewTagFromInput() }
         newTagInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -226,27 +242,16 @@ object AddBulletDialog {
         }
 
         view.setBackgroundColor(context.getColorFromAttr(R.attr.dialogShadeColor))
-        // Tint star icons with primary text color.
-        val textColor = context.getColorFromAttr(R.attr.primaryColor)
-        priorityIcon.setColorFilter(textColor)
+        view.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+        )
+        priorityIcon.setColorFilter(context.getColorFromAttr(R.attr.primaryColor))
 
-        dialog.setOnShowListener {
-            val sheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-                ?: return@setOnShowListener
-            val height = (context.resources.displayMetrics.heightPixels * 0.9f).toInt()
-            sheet.layoutParams = sheet.layoutParams.apply { this.height = height }
-            sheet.requestLayout()
-            val behavior = BottomSheetBehavior.from(sheet)
-            behavior.peekHeight = height
-            behavior.skipCollapsed = true
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            // Fill the 90% sheet so the tag section can use leftover space.
-            view.layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
         dialog.show()
         input.requestFocus()
     }
+
+    private fun dp(context: Context, value: Int): Int =
+        (value * context.resources.displayMetrics.density).toInt()
 }
