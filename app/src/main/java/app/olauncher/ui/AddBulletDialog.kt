@@ -18,6 +18,9 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import app.olauncher.R
 import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
@@ -51,16 +54,24 @@ object AddBulletDialog {
         dialog.setContentView(view)
 
         val sheetScroll = view.findViewById<android.widget.ScrollView>(R.id.sheetScroll)
-        val maxSheetHeight = (context.resources.displayMetrics.heightPixels * 0.9f).toInt()
+        val screenHeight = context.resources.displayMetrics.heightPixels
+        // Soft cap when the keyboard is closed; shrinks further when IME is open.
+        var imeBottom = 0
+        fun maxSheetHeight(): Int {
+            val aboveIme = (screenHeight - imeBottom).coerceAtLeast(dp(context, 200))
+            return minOf((screenHeight * 0.9f).toInt(), aboveIme)
+        }
+
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            // Cap at 90%; actual height follows content so footer isn't stranded
-            // at the bottom of empty space under the keyboard.
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             setGravity(Gravity.BOTTOM)
-            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            // Wallpaper / translucent launcher windows ignore ADJUST_RESIZE, so the
+            // keyboard would cover this bottom sheet. We lift it via IME insets instead.
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             attributes = attributes.apply { dimAmount = 0.55f }
+            WindowCompat.setDecorFitsSystemWindows(this, false)
         }
 
         fun clampSheetHeight() {
@@ -69,6 +80,7 @@ object AddBulletDialog {
                 context.resources.displayMetrics.widthPixels,
                 View.MeasureSpec.EXACTLY,
             )
+            val maxHeight = maxSheetHeight()
             // Let ScrollView wrap its children for an honest content height.
             sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
                 height = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -82,27 +94,48 @@ object AddBulletDialog {
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
             )
             val contentHeight = view.measuredHeight
-            if (contentHeight <= maxSheetHeight) {
-                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, contentHeight)
+            val windowHeight = if (contentHeight <= maxHeight) {
+                sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                }
                 view.layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                 )
+                contentHeight
             } else {
-                // Too tall: pin window to 90% and let the body scroll above the sticky footer.
+                // Too tall for the space above the keyboard: scroll the body.
                 val footerHeight = contentHeight - sheetScroll.measuredHeight
-                val scrollHeight = (maxSheetHeight - footerHeight).coerceAtLeast(dp(context, 120))
+                val scrollHeight = (maxHeight - footerHeight).coerceAtLeast(dp(context, 120))
                 sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
                     height = scrollHeight
                 }
-                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, maxSheetHeight)
                 view.layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    maxSheetHeight,
+                    maxHeight,
                 )
+                maxHeight
+            }
+            // Gravity.BOTTOM: y is the offset from the bottom edge — sit above the IME.
+            window.attributes = window.attributes.apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = windowHeight
+                y = imeBottom
             }
             view.requestLayout()
         }
+
+        fun onImeInsets(insets: WindowInsetsCompat): WindowInsetsCompat {
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            if (ime != imeBottom) {
+                imeBottom = ime
+                clampSheetHeight()
+            }
+            return insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> onImeInsets(insets) }
 
         val title = view.findViewById<TextView>(R.id.dialogTitle)
         val input = view.findViewById<EditText>(R.id.entryInput)
@@ -291,10 +324,23 @@ object AddBulletDialog {
         view.setBackgroundColor(context.getColorFromAttr(R.attr.drawerBackgroundColor))
         priorityIcon.setColorFilter(context.getColorFromAttr(R.attr.primaryColor))
 
-        dialog.setOnShowListener { clampSheetHeight() }
+        dialog.setOnShowListener {
+            val decor = dialog.window?.decorView
+            if (decor != null) {
+                // Decor receives IME insets more reliably than the content view alone.
+                ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets -> onImeInsets(insets) }
+                ViewCompat.requestApplyInsets(decor)
+            }
+            clampSheetHeight()
+            ViewCompat.requestApplyInsets(view)
+        }
         dialog.show()
         clampSheetHeight()
-        input.requestFocus()
+        // Focus after show so typing can begin; IME insets lift the sheet above the keyboard.
+        input.post {
+            input.requestFocus()
+            dialog.window?.decorView?.let { ViewCompat.requestApplyInsets(it) }
+        }
     }
 
     private fun dp(context: Context, value: Int): Int =
