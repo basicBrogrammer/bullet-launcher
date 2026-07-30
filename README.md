@@ -8,10 +8,10 @@ A minimal Android home-screen launcher built around a **bullet journal**. Your h
 
 First launch seeds sample tasks, events, and tip notes so you can explore the journal immediately. Watch the tour:
 
-[![Guided walkthrough](artifacts/media/guided-walkthrough.mp4)](artifacts/media/guided-walkthrough.mp4)
+[![Guided walkthrough](artifacts/media/guided-walkthrough-poster.png)](https://github.com/basicBrogrammer/bullet-launcher/raw/master/artifacts/media/guided-walkthrough.mp4)
 
-<video src="artifacts/media/guided-walkthrough.mp4" controls width="360" poster="">
-  <a href="artifacts/media/guided-walkthrough.mp4">Download / play the guided walkthrough</a>
+<video src="https://github.com/basicBrogrammer/bullet-launcher/raw/master/artifacts/media/guided-walkthrough.mp4" controls width="360" poster="artifacts/media/guided-walkthrough-poster.png" playsinline>
+  <a href="https://github.com/basicBrogrammer/bullet-launcher/raw/master/artifacts/media/guided-walkthrough.mp4">Download / play the guided walkthrough</a>
 </video>
 
 ## How it works
