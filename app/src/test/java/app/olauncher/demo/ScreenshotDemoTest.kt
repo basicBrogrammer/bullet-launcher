@@ -81,25 +81,71 @@ class ScreenshotDemoTest {
         recycler.layoutManager = LinearLayoutManager(root.context)
         val adapter = JournalBulletAdapter({}, {})
         recycler.adapter = adapter
-        adapter.submit(
-            listOf(
-                JournalListItem.Section(
-                    "26 · Sun",
-                    listOf(
-                        demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
-                        demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26"),
-                    )
-                ),
-                JournalListItem.Section(
-                    "27 · Mon",
-                    listOf(
-                        demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
-                        demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27"),
-                    )
-                ),
+        // Earlier days fill the viewport so scrolling to today (30) is visible —
+        // matches the default "scroll to today" landing position.
+        val dayLabel = java.text.SimpleDateFormat("d · EEE", java.util.Locale.US)
+        val earlier = (1..25).map { day ->
+            val cal = java.util.Calendar.getInstance().apply {
+                set(2026, java.util.Calendar.JULY, day)
+            }
+            JournalListItem.Section(
+                dayLabel.format(cal.time),
+                listOf(demoEntry("Day $day note", BulletType.NOTE, day = "2026-07-${day.toString().padStart(2, '0')}")),
             )
+        }
+        val sections = earlier + listOf(
+            JournalListItem.Section(
+                "26 · Sun",
+                listOf(
+                    demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
+                    demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26"),
+                )
+            ),
+            JournalListItem.Section(
+                "27 · Mon",
+                listOf(
+                    demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
+                    demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27"),
+                )
+            ),
+            JournalListItem.Section(
+                "28 · Tue",
+                listOf(demoEntry("Write weekly review", BulletType.TASK, day = "2026-07-28"))
+            ),
+            JournalListItem.Section(
+                "29 · Wed",
+                listOf(
+                    demoEntry("Grocery run", BulletType.TASK, day = "2026-07-29"),
+                    demoEntry("Idea: denser monthly log", BulletType.NOTE, day = "2026-07-29"),
+                )
+            ),
+            JournalListItem.Section(
+                "30 · Thu",
+                listOf(
+                    demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-30"),
+                    demoEntry("Team standup · 10:00", BulletType.EVENT, day = "2026-07-30"),
+                    demoEntry("Pin monthly log to today", BulletType.TASK, day = "2026-07-30"),
+                )
+            ),
         )
+        adapter.submit(sections)
         root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+        // Harness measures after populate; size the list, add bottom pad so the
+        // last (today) section can sit at the top — same trick as production.
+        val metrics = root.resources.displayMetrics
+        fun layoutRoot() {
+            root.measure(
+                View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.EXACTLY),
+            )
+            root.layout(0, 0, metrics.widthPixels, metrics.heightPixels)
+        }
+        layoutRoot()
+        val bottomPad = (recycler.height - recycler.paddingTop).coerceAtLeast(recycler.paddingBottom)
+        recycler.setPadding(recycler.paddingLeft, recycler.paddingTop, recycler.paddingRight, bottomPad)
+        (recycler.layoutManager as LinearLayoutManager)
+            .scrollToPositionWithOffset(sections.lastIndex, 0)
+        layoutRoot()
     }
 
     @Test
