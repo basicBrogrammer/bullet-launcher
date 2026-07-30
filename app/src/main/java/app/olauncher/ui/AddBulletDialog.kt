@@ -13,6 +13,7 @@ import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
@@ -242,7 +243,9 @@ object AddBulletDialog {
         }
 
         view.setBackgroundColor(context.getColorFromAttr(R.attr.dialogShadeColor))
-        view.layoutParams = ViewGroup.LayoutParams(
+        // Dialog content parent is a FrameLayout; plain ViewGroup.LayoutParams
+        // crashes measure with ClassCastException (needs MarginLayoutParams).
+        view.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT,
         )
