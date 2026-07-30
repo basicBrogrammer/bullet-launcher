@@ -84,6 +84,7 @@ class JournalPagerAdapter(
         private val bulletList: RecyclerView = itemView.findViewById(R.id.bulletList)
         private val adapter = JournalBulletAdapter(onToggle, onLongPress)
         private var todaySectionIndex: Int = RecyclerView.NO_POSITION
+        private val defaultListPaddingBottom = bulletList.paddingBottom
 
         init {
             bulletList.layoutManager = LinearLayoutManager(itemView.context)
@@ -129,11 +130,33 @@ class JournalPagerAdapter(
             bulletList.post {
                 if (todaySectionIndex != index) return@post
                 if (index >= adapter.itemCount) return@post
+                // Extra bottom space so today's section (often last) can sit at the top.
+                val bottomPad = (bulletList.height - bulletList.paddingTop)
+                    .coerceAtLeast(defaultListPaddingBottom)
+                if (bulletList.paddingBottom != bottomPad) {
+                    bulletList.setPadding(
+                        bulletList.paddingLeft,
+                        bulletList.paddingTop,
+                        bulletList.paddingRight,
+                        bottomPad,
+                    )
+                }
                 layoutManager.scrollToPositionWithOffset(index, 0)
             }
         }
 
+        private fun resetListPadding() {
+            if (bulletList.paddingBottom == defaultListPaddingBottom) return
+            bulletList.setPadding(
+                bulletList.paddingLeft,
+                bulletList.paddingTop,
+                bulletList.paddingRight,
+                defaultListPaddingBottom,
+            )
+        }
+
         private fun bindDaily() {
+            resetListPadding()
             logTitle.setText(R.string.daily_log)
             logSubtitle.text = store.formatDayHeader()
             val entries = store.getForDay(store.todayKey())
@@ -170,6 +193,7 @@ class JournalPagerAdapter(
         }
 
         private fun bindFuture() {
+            resetListPadding()
             logTitle.setText(R.string.future_log)
             logSubtitle.setText(R.string.future_log_subtitle)
             val months = store.futureMonthKeys(6)
