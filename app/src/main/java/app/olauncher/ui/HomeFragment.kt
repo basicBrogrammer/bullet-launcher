@@ -34,6 +34,7 @@ import app.olauncher.R
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import app.olauncher.data.AppModel
 import app.olauncher.data.BulletType
 import app.olauncher.data.Constants
@@ -364,6 +365,11 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.journalPager.adapter = adapter
         binding.journalPager.setCurrentItem(JournalPages.DAILY, false)
         binding.journalPager.offscreenPageLimit = 1
+        binding.journalPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                journalPagerAdapter?.onPageSelected(position)
+            }
+        })
         // Gap between clock and weather (and any uncovered header chrome).
         binding.dateTimeLayout.setWallpaperGestures(
             onLongPress = { openSettings() },

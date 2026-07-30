@@ -81,24 +81,47 @@ class ScreenshotDemoTest {
         recycler.layoutManager = LinearLayoutManager(root.context)
         val adapter = JournalBulletAdapter({}, {})
         recycler.adapter = adapter
-        adapter.submit(
-            listOf(
-                JournalListItem.Section(
-                    "26 · Sun",
-                    listOf(
-                        demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
-                        demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26"),
-                    )
-                ),
-                JournalListItem.Section(
-                    "27 · Mon",
-                    listOf(
-                        demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
-                        demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27"),
-                    )
-                ),
-            )
+        // Enough earlier days that today's section only appears after scrolling —
+        // matches the default "scroll to today" landing position.
+        val sections = mutableListOf(
+            JournalListItem.Section(
+                "26 · Sun",
+                listOf(
+                    demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
+                    demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26"),
+                )
+            ),
+            JournalListItem.Section(
+                "27 · Mon",
+                listOf(
+                    demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
+                    demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27"),
+                )
+            ),
+            JournalListItem.Section(
+                "28 · Tue",
+                listOf(demoEntry("Write weekly review", BulletType.TASK, day = "2026-07-28"))
+            ),
+            JournalListItem.Section(
+                "29 · Wed",
+                listOf(
+                    demoEntry("Grocery run", BulletType.TASK, day = "2026-07-29"),
+                    demoEntry("Idea: denser monthly log", BulletType.NOTE, day = "2026-07-29"),
+                )
+            ),
+            JournalListItem.Section(
+                "30 · Thu",
+                listOf(
+                    demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-30"),
+                    demoEntry("Team standup · 10:00", BulletType.EVENT, day = "2026-07-30"),
+                    demoEntry("Pin monthly log to today", BulletType.TASK, day = "2026-07-30"),
+                )
+            ),
         )
+        adapter.submit(sections)
+        val todayIndex = sections.lastIndex
+        (recycler.layoutManager as LinearLayoutManager)
+            .scrollToPositionWithOffset(todayIndex, 0)
         root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
     }
 

@@ -27,6 +27,9 @@ class JournalPagerAdapter(
 
     private val dayLabelFormat = SimpleDateFormat("d · EEE", Locale.getDefault())
     private val dayParseFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    private var monthlyPage: PageVH? = null
+    /** Mirrors the journal ViewPager selection; used to avoid jumping while browsing monthly. */
+    private var currentPage: Int = JournalPages.DAILY
 
     override fun getItemCount(): Int = JournalPages.COUNT
 
@@ -40,8 +43,37 @@ class JournalPagerAdapter(
         holder.bind(position)
     }
 
+    override fun onViewAttachedToWindow(holder: PageVH) {
+        super.onViewAttachedToWindow(holder)
+        if (holder.bindingAdapterPosition == JournalPages.MONTHLY) {
+            monthlyPage = holder
+            // Keep the off-screen monthly page pinned to today so the first
+            // swipe-in (and any recycle) lands on the right day.
+            holder.scrollToToday()
+        }
+    }
+
+    override fun onViewDetachedFromWindow(holder: PageVH) {
+        if (monthlyPage === holder) monthlyPage = null
+        super.onViewDetachedFromWindow(holder)
+    }
+
     fun refresh() {
         notifyDataSetChanged()
+    }
+
+    /**
+     * Called when the journal pager settles on a page.
+     * Entering monthly scrolls to today; leaving resets so the next visit starts there.
+     */
+    fun onPageSelected(page: Int) {
+        currentPage = page
+        scrollMonthlyToToday()
+    }
+
+    /** Pin the monthly log to today's section. */
+    fun scrollMonthlyToToday() {
+        monthlyPage?.scrollToToday()
     }
 
     inner class PageVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -51,6 +83,7 @@ class JournalPagerAdapter(
         private val emptyHint: TextView = itemView.findViewById(R.id.emptyHint)
         private val bulletList: RecyclerView = itemView.findViewById(R.id.bulletList)
         private val adapter = JournalBulletAdapter(onToggle, onLongPress)
+        private var todaySectionIndex: Int = RecyclerView.NO_POSITION
 
         init {
             bulletList.layoutManager = LinearLayoutManager(itemView.context)
@@ -81,10 +114,22 @@ class JournalPagerAdapter(
         }
 
         fun bind(page: Int) {
+            todaySectionIndex = RecyclerView.NO_POSITION
             when (page) {
                 JournalPages.MONTHLY -> bindMonthly()
                 JournalPages.FUTURE -> bindFuture()
                 else -> bindDaily()
+            }
+        }
+
+        fun scrollToToday() {
+            val index = todaySectionIndex
+            if (index == RecyclerView.NO_POSITION) return
+            val layoutManager = bulletList.layoutManager as? LinearLayoutManager ?: return
+            bulletList.post {
+                if (todaySectionIndex != index) return@post
+                if (index >= adapter.itemCount) return@post
+                layoutManager.scrollToPositionWithOffset(index, 0)
             }
         }
 
@@ -106,14 +151,22 @@ class JournalPagerAdapter(
             val dayKeys = store.daysInMonth(monthKey).filter { key ->
                 key <= today || byDay.containsKey(key)
             }
-            val sections = dayKeys.mapNotNull { key ->
+            val sections = mutableListOf<JournalListItem.Section>()
+            var todayIndex = RecyclerView.NO_POSITION
+            for (key in dayKeys) {
                 val entries = byDay[key].orEmpty()
-                if (entries.isEmpty() && key != today) return@mapNotNull null
-                JournalListItem.Section(daySectionTitle(key), entries)
+                if (entries.isEmpty() && key != today) continue
+                if (key == today) todayIndex = sections.size
+                sections.add(JournalListItem.Section(daySectionTitle(key), entries))
             }
+            todaySectionIndex = todayIndex
             emptyHint.visibility = if (sections.isEmpty()) View.VISIBLE else View.GONE
             emptyHint.setText(R.string.journal_monthly_empty)
             adapter.submit(sections)
+            // Re-pin when this page is off-screen (e.g. after refresh). Stay put while browsing it.
+            if (currentPage != JournalPages.MONTHLY) {
+                scrollToToday()
+            }
         }
 
         private fun bindFuture() {
