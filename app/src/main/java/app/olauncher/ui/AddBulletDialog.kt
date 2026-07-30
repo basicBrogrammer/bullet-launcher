@@ -16,11 +16,13 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import app.olauncher.R
 import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
@@ -50,110 +52,125 @@ object AddBulletDialog {
     ) {
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        val view = LayoutInflater.from(context).inflate(R.layout.dialog_add_bullet, null)
-        dialog.setContentView(view)
 
-        val sheetScroll = view.findViewById<android.widget.ScrollView>(R.id.sheetScroll)
+        // Full-screen host so we can pad the sheet above nav / IME without moving the
+        // window itself (window y-offset caused a ghost sheet + flicker).
+        val host = FrameLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+        }
+        val sheet = LayoutInflater.from(context).inflate(R.layout.dialog_add_bullet, host, false)
+        val sheetLp = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM,
+        )
+        host.addView(sheet, sheetLp)
+        dialog.setContentView(host)
+
+        val sheetScroll = sheet.findViewById<ScrollView>(R.id.sheetScroll)
         val screenHeight = context.resources.displayMetrics.heightPixels
-        // Soft cap when the keyboard is closed; shrinks further when IME is open.
-        var imeBottom = 0
+        val closedBottomMargin = dp(context, 28) // clearance above gesture / home buttons
+        var bottomInset = closedBottomMargin
+
         fun maxSheetHeight(): Int {
-            val aboveIme = (screenHeight - imeBottom).coerceAtLeast(dp(context, 200))
-            return minOf((screenHeight * 0.9f).toInt(), aboveIme)
+            val available = (screenHeight - bottomInset).coerceAtLeast(dp(context, 200))
+            return minOf((screenHeight * 0.9f).toInt(), available)
         }
 
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            setGravity(Gravity.BOTTOM)
-            // Wallpaper / translucent launcher windows ignore ADJUST_RESIZE, so the
-            // keyboard would cover this bottom sheet. We lift it via IME insets instead.
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            setGravity(Gravity.FILL)
+            // Wallpaper launcher windows ignore ADJUST_RESIZE; lift via insets padding.
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            attributes = attributes.apply { dimAmount = 0.55f }
+            attributes = attributes.apply {
+                dimAmount = 0.55f
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+                y = 0
+            }
             WindowCompat.setDecorFitsSystemWindows(this, false)
         }
 
         fun clampSheetHeight() {
-            val window = dialog.window ?: return
             val widthSpec = View.MeasureSpec.makeMeasureSpec(
                 context.resources.displayMetrics.widthPixels,
                 View.MeasureSpec.EXACTLY,
             )
             val maxHeight = maxSheetHeight()
-            // Let ScrollView wrap its children for an honest content height.
             sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
                 height = ViewGroup.LayoutParams.WRAP_CONTENT
             }
-            view.layoutParams = FrameLayout.LayoutParams(
+            sheet.layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-            view.measure(
+                Gravity.BOTTOM,
+            ).also { it.bottomMargin = bottomInset }
+
+            sheet.measure(
                 widthSpec,
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
             )
-            val contentHeight = view.measuredHeight
-            val windowHeight = if (contentHeight <= maxHeight) {
-                sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
-                    height = ViewGroup.LayoutParams.WRAP_CONTENT
-                }
-                view.layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                )
-                contentHeight
-            } else {
-                // Too tall for the space above the keyboard: scroll the body.
+            val contentHeight = sheet.measuredHeight
+            if (contentHeight > maxHeight) {
                 val footerHeight = contentHeight - sheetScroll.measuredHeight
                 val scrollHeight = (maxHeight - footerHeight).coerceAtLeast(dp(context, 120))
                 sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
                     height = scrollHeight
                 }
-                view.layoutParams = FrameLayout.LayoutParams(
+                sheet.layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     maxHeight,
-                )
-                maxHeight
+                    Gravity.BOTTOM,
+                ).also { it.bottomMargin = bottomInset }
             }
-            // Gravity.BOTTOM: y is the offset from the bottom edge — sit above the IME.
-            window.attributes = window.attributes.apply {
-                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = windowHeight
-                y = imeBottom
-            }
-            view.requestLayout()
+            sheet.requestLayout()
         }
 
-        fun onImeInsets(insets: WindowInsetsCompat): WindowInsetsCompat {
+        fun applyBottomInset(ime: Int, nav: Int) {
+            // Keyboard open: sit on the IME. Keyboard closed: clear nav / home gesture bar.
+            val next = if (ime > 0) {
+                ime
+            } else {
+                maxOf(nav, closedBottomMargin)
+            }
+            if (next == bottomInset) return
+            bottomInset = next
+            sheet.updateLayoutParams<FrameLayout.LayoutParams> {
+                bottomMargin = bottomInset
+                gravity = Gravity.BOTTOM
+            }
+            clampSheetHeight()
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(host) { _, insets ->
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            if (ime != imeBottom) {
-                imeBottom = ime
-                clampSheetHeight()
-            }
-            return insets
+            val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            applyBottomInset(ime, nav)
+            insets
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> onImeInsets(insets) }
-
-        val title = view.findViewById<TextView>(R.id.dialogTitle)
-        val input = view.findViewById<EditText>(R.id.entryInput)
-        val typeTask = view.findViewById<TextView>(R.id.typeTask)
-        val typeEvent = view.findViewById<TextView>(R.id.typeEvent)
-        val typeNote = view.findViewById<TextView>(R.id.typeNote)
-        val tagsSection = view.findViewById<View>(R.id.tagsSection)
-        val tagList = view.findViewById<LinearLayout>(R.id.tagChipGroup)
-        val newTagInput = view.findViewById<EditText>(R.id.newTagInput)
-        val addTagButton = view.findViewById<TextView>(R.id.addTagButton)
-        val calendarSection = view.findViewById<View>(R.id.calendarSection)
-        val calendarSpinner = view.findViewById<Spinner>(R.id.calendarSpinner)
-        val priorityRow = view.findViewById<LinearLayout>(R.id.priorityRow)
-        val priorityIcon = view.findViewById<ImageView>(R.id.priorityIcon)
-        val priorityToggle = view.findViewById<TextView>(R.id.priorityToggle)
-        val delete = view.findViewById<TextView>(R.id.deleteButton)
-        val cancel = view.findViewById<TextView>(R.id.cancelButton)
-        val save = view.findViewById<TextView>(R.id.saveButton)
+        val title = sheet.findViewById<TextView>(R.id.dialogTitle)
+        val input = sheet.findViewById<EditText>(R.id.entryInput)
+        val typeTask = sheet.findViewById<TextView>(R.id.typeTask)
+        val typeEvent = sheet.findViewById<TextView>(R.id.typeEvent)
+        val typeNote = sheet.findViewById<TextView>(R.id.typeNote)
+        val tagsSection = sheet.findViewById<View>(R.id.tagsSection)
+        val tagList = sheet.findViewById<LinearLayout>(R.id.tagChipGroup)
+        val newTagInput = sheet.findViewById<EditText>(R.id.newTagInput)
+        val addTagButton = sheet.findViewById<TextView>(R.id.addTagButton)
+        val calendarSection = sheet.findViewById<View>(R.id.calendarSection)
+        val calendarSpinner = sheet.findViewById<Spinner>(R.id.calendarSpinner)
+        val priorityRow = sheet.findViewById<LinearLayout>(R.id.priorityRow)
+        val priorityIcon = sheet.findViewById<ImageView>(R.id.priorityIcon)
+        val priorityToggle = sheet.findViewById<TextView>(R.id.priorityToggle)
+        val delete = sheet.findViewById<TextView>(R.id.deleteButton)
+        val cancel = sheet.findViewById<TextView>(R.id.cancelButton)
+        val save = sheet.findViewById<TextView>(R.id.saveButton)
 
         var selectedType = existing?.type ?: BulletType.TASK
         var priority = existing?.priority ?: false
@@ -321,25 +338,22 @@ object AddBulletDialog {
         }
 
         // Opaque paper/grey surface (same as drawer) so wallpaper doesn't show through.
-        view.setBackgroundColor(context.getColorFromAttr(R.attr.drawerBackgroundColor))
+        sheet.setBackgroundColor(context.getColorFromAttr(R.attr.drawerBackgroundColor))
         priorityIcon.setColorFilter(context.getColorFromAttr(R.attr.primaryColor))
 
+        // Tapping the dimmed area outside the sheet dismisses.
+        host.setOnClickListener { dialog.dismiss() }
+        sheet.setOnClickListener { /* keep taps on the sheet from dismissing */ }
+
         dialog.setOnShowListener {
-            val decor = dialog.window?.decorView
-            if (decor != null) {
-                // Decor receives IME insets more reliably than the content view alone.
-                ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets -> onImeInsets(insets) }
-                ViewCompat.requestApplyInsets(decor)
-            }
+            ViewCompat.requestApplyInsets(host)
             clampSheetHeight()
-            ViewCompat.requestApplyInsets(view)
         }
         dialog.show()
         clampSheetHeight()
-        // Focus after show so typing can begin; IME insets lift the sheet above the keyboard.
         input.post {
             input.requestFocus()
-            dialog.window?.decorView?.let { ViewCompat.requestApplyInsets(it) }
+            ViewCompat.requestApplyInsets(host)
         }
     }
 
