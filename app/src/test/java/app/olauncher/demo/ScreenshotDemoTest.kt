@@ -133,20 +133,78 @@ class ScreenshotDemoTest {
     }
 
     @Test
-    fun index() = capture("04_index", R.layout.dialog_index) { _, root ->
-        root.findViewById<TextView>(R.id.indexDaily).setText(R.string.index_daily_row)
-        root.findViewById<TextView>(R.id.indexMonthly).setText(R.string.index_monthly_row)
-        root.findViewById<TextView>(R.id.indexFuture).setText(R.string.index_future_row)
-        // Give the dialog a readable backdrop for the screenshot.
-        (root as? View)?.setBackgroundColor(Color.WHITE)
+    fun index() = capture("04_index", R.layout.dialog_index) { activity, root ->
+        val list = root.findViewById<android.widget.LinearLayout>(R.id.indexList)
+        listOf(
+            activity.getString(R.string.index_unscheduled_row),
+            activity.getString(R.string.index_tag_row, 2, "Personal"),
+            activity.getString(R.string.index_tag_row, 3, "Work"),
+        ).forEach { label ->
+            val row = TextView(activity).apply {
+                setTextAppearance(activity, R.style.TextMedium)
+                text = label
+                setPadding(0, 24, 0, 24)
+            }
+            list.addView(row)
+        }
+        root.setBackgroundColor(Color.WHITE)
     }
 
     @Test
-    fun addBullet() = capture("05_add_bullet", R.layout.dialog_add_bullet) { _, root ->
-        root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
-        root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
+    fun unscheduled() = capture("04b_unscheduled", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).setText(R.string.unscheduled_log)
+        root.findViewById<TextView>(R.id.logSubtitle).setText(R.string.unscheduled_log_subtitle)
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                demoEntry("Inbox triage", BulletType.TASK, tags = listOf("Work")),
+                demoEntry("Read design notes", BulletType.TASK, priority = true, tags = listOf("Personal")),
+            ).map { JournalListItem.Bullet(it) }
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+    }
+
+    @Test
+    fun tagCollection() = capture("04c_tag_work", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).text = "Work"
+        root.findViewById<TextView>(R.id.logSubtitle).setText(R.string.tag_log_subtitle)
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                demoEntry("Review monthly goals", BulletType.TASK, tags = listOf("Work")),
+                demoEntry("Inbox triage", BulletType.TASK, tags = listOf("Work")),
+                demoEntry("Ship v7", BulletType.TASK, log = JournalLog.FUTURE, day = "2026-09", tags = listOf("Work")),
+            ).map { JournalListItem.Bullet(it) }
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+    }
+
+    @Test
+    fun addBullet() = capture("05_add_bullet", R.layout.dialog_add_bullet) { activity, root ->
+        root.findViewById<TextView>(R.id.typeTask).alpha = 1f
+        root.findViewById<TextView>(R.id.typeEvent).alpha = 0.45f
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
-        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.tagsSection).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.calendarSection).visibility = View.GONE
+        root.findViewById<EditText>(R.id.entryInput).setText("Morning pages")
+        root.findViewById<TextView>(R.id.scheduleValue).setText(R.string.schedule_unscheduled)
+        val tags = root.findViewById<android.widget.LinearLayout>(R.id.tagChipGroup)
+        listOf("#Personal", "#Work").forEachIndexed { index, label ->
+            tags.addView(
+                TextView(activity).apply {
+                    setTextAppearance(activity, R.style.TextMedium)
+                    text = label
+                    alpha = if (index == 0) 1f else 0.45f
+                    setPadding(0, 20, 0, 20)
+                }
+            )
+        }
         root.setBackgroundColor(Color.WHITE)
     }
 
@@ -157,18 +215,26 @@ class ScreenshotDemoTest {
         root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
         root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
-        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.tagsSection).visibility = View.GONE
+        root.findViewById<View>(R.id.calendarSection).visibility = View.VISIBLE
         root.findViewById<TextView>(R.id.deleteButton).visibility = View.VISIBLE
         root.setBackgroundColor(Color.WHITE)
     }
 
     @Test
-    fun addBulletEventSelected() = capture("05b_add_bullet_event", R.layout.dialog_add_bullet) { _, root ->
+    fun addBulletEventSelected() = capture("05b_add_bullet_event", R.layout.dialog_add_bullet) { activity, root ->
         root.findViewById<TextView>(R.id.typeTask).alpha = 0.45f
         root.findViewById<TextView>(R.id.typeEvent).alpha = 1f
         root.findViewById<TextView>(R.id.typeNote).alpha = 0.45f
         root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
-        root.findViewById<TextView>(R.id.calendarSyncHint).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.tagsSection).visibility = View.GONE
+        root.findViewById<View>(R.id.calendarSection).visibility = View.VISIBLE
+        val spinner = root.findViewById<android.widget.Spinner>(R.id.calendarSpinner)
+        spinner.adapter = android.widget.ArrayAdapter(
+            activity,
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Personal · you@gmail.com", "Work · you@company.com"),
+        )
         root.setBackgroundColor(Color.WHITE)
     }
 
@@ -391,6 +457,7 @@ class ScreenshotDemoTest {
         completed: Boolean = false,
         log: JournalLog = JournalLog.DAILY,
         day: String = "2026-07-27",
+        tags: List<String> = emptyList(),
     ) = JournalEntry(
         id = text,
         text = text,
@@ -399,6 +466,7 @@ class ScreenshotDemoTest {
         dateKey = day,
         priority = priority,
         completed = completed,
+        tags = tags,
     )
 
     /** Synthetic colored icon; ImageView B&W filter turns it monochrome for demos. */

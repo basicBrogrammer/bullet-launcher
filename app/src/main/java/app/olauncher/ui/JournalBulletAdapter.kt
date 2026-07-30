@@ -4,11 +4,15 @@ import android.graphics.Paint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
+import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
+import app.olauncher.helper.getColorFromAttr
 
 sealed class JournalListItem {
     data class Bullet(val entry: JournalEntry) : JournalListItem()
@@ -51,17 +55,12 @@ class JournalBulletAdapter(
     }
 
     inner class BulletVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val star: ImageView = itemView.findViewById(R.id.priorityStar)
         private val symbol: TextView = itemView.findViewById(R.id.bulletSymbol)
         private val text: TextView = itemView.findViewById(R.id.bulletText)
 
         fun bind(entry: JournalEntry) {
-            symbol.text = entry.displaySymbol()
-            text.text = entry.text
-            text.paintFlags = if (entry.completed) {
-                text.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            } else {
-                text.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
-            }
+            bindBulletRow(star, symbol, text, entry)
             itemView.setOnClickListener { onToggle(entry) }
             itemView.setOnLongClickListener {
                 onLongPress(entry)
@@ -80,14 +79,10 @@ class JournalBulletAdapter(
             val inflater = LayoutInflater.from(itemView.context)
             section.entries.forEach { entry ->
                 val row = inflater.inflate(R.layout.item_journal_bullet, bullets, false)
-                row.findViewById<TextView>(R.id.bulletSymbol).text = entry.displaySymbol()
+                val star = row.findViewById<ImageView>(R.id.priorityStar)
+                val symbol = row.findViewById<TextView>(R.id.bulletSymbol)
                 val textView = row.findViewById<TextView>(R.id.bulletText)
-                textView.text = entry.text
-                textView.paintFlags = if (entry.completed) {
-                    textView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-                } else {
-                    textView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
-                }
+                bindBulletRow(star, symbol, textView, entry)
                 row.setOnClickListener { onToggle(entry) }
                 row.setOnLongClickListener {
                     onLongPress(entry)
@@ -103,6 +98,31 @@ class JournalBulletAdapter(
                 }
                 bullets.addView(empty)
             }
+        }
+    }
+
+    private fun bindBulletRow(
+        star: ImageView,
+        symbol: TextView,
+        text: TextView,
+        entry: JournalEntry,
+    ) {
+        text.text = entry.displayText()
+        text.paintFlags = if (entry.completed) {
+            text.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+        } else {
+            text.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+        }
+        // Priority uses the star as the sole marker (not star + bullet).
+        // Completed tasks still show × so status stays obvious.
+        val showStar = entry.priority && !(entry.type == BulletType.TASK && entry.completed)
+        star.isVisible = showStar
+        symbol.isVisible = !showStar
+        if (!showStar) {
+            symbol.text = entry.displaySymbol()
+        }
+        if (showStar) {
+            star.setColorFilter(star.context.getColorFromAttr(R.attr.primaryColor))
         }
     }
 

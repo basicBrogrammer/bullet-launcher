@@ -68,6 +68,16 @@ object CalendarSyncHelper {
     fun listWritableCalendars(context: Context): List<DeviceCalendar> =
         listCalendars(context).filter { it.canWrite }
 
+    /**
+     * Writable calendars the user enabled in Settings → Calendars to sync.
+     * When sync selection is not configured yet, all writable calendars are offered.
+     */
+    fun listEnabledWritableCalendars(context: Context, prefs: Prefs): List<DeviceCalendar> {
+        val writable = listWritableCalendars(context)
+        if (!prefs.syncedCalendarsConfigured) return writable
+        return writable.filter { it.id in prefs.syncedCalendarIds }
+    }
+
     fun listCalendars(context: Context): List<DeviceCalendar> {
         if (!hasCalendarPermissions(context)) return emptyList()
         val projection = arrayOf(
@@ -141,7 +151,7 @@ object CalendarSyncHelper {
         if (!hasCalendarPermissions(context)) return null
         if (calendarId <= 0L) return null
 
-        val (startMillis, endMillis) = eventBoundsUtc(entry) ?: return null
+        val (startMillis, endMillis, allDay) = eventBounds(entry) ?: return null
 
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
@@ -149,8 +159,11 @@ object CalendarSyncHelper {
             put(CalendarContract.Events.DESCRIPTION, EVENT_DESCRIPTION)
             put(CalendarContract.Events.DTSTART, startMillis)
             put(CalendarContract.Events.DTEND, endMillis)
-            put(CalendarContract.Events.ALL_DAY, 1)
-            put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getTimeZone("UTC").id)
+            put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+            put(
+                CalendarContract.Events.EVENT_TIMEZONE,
+                if (allDay) TimeZone.getTimeZone("UTC").id else TimeZone.getDefault().id,
+            )
             put(CalendarContract.Events.STATUS, CalendarContract.Events.STATUS_CONFIRMED)
             put(CalendarContract.Events.HAS_ALARM, 0)
             put(CalendarContract.Events.CUSTOM_APP_PACKAGE, context.packageName)
@@ -488,6 +501,34 @@ object CalendarSyncHelper {
     }
 
     /**
+     * Event bounds for calendar insert.
+     * Timed events use local timezone hour/minute; all-day use UTC midnight.
+     * Returns Triple(start, end, allDay).
+     */
+    private fun eventBounds(entry: JournalEntry): Triple<Long, Long, Boolean>? {
+        val timeMinutes = entry.timeMinutes
+        if (timeMinutes != null && entry.log != JournalLog.FUTURE && entry.log != JournalLog.UNSCHEDULED) {
+            return try {
+                val parsed = dayFormat.parse(entry.dateKey) ?: return null
+                val local = Calendar.getInstance().apply {
+                    time = parsed
+                    set(Calendar.HOUR_OF_DAY, timeMinutes / 60)
+                    set(Calendar.MINUTE, timeMinutes % 60)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val start = local.timeInMillis
+                local.add(Calendar.HOUR_OF_DAY, 1)
+                Triple(start, local.timeInMillis, false)
+            } catch (e: Exception) {
+                Log.e(TAG, "Bad timed dateKey ${entry.dateKey}", e)
+                null
+            }
+        }
+        return eventBoundsUtc(entry)?.let { (start, end) -> Triple(start, end, true) }
+    }
+
+    /**
      * All-day event bounds in UTC midnight, as required by CalendarContract.
      * Daily/Monthly (yyyy-MM-dd) → that day.
      * Future (yyyy-MM) → first day of that month.
@@ -510,6 +551,16 @@ object CalendarSyncHelper {
                 JournalLog.DAILY, JournalLog.MONTHLY -> {
                     val parsed = dayFormat.parse(entry.dateKey) ?: return null
                     val local = Calendar.getInstance().apply { time = parsed }
+                    cal.set(
+                        local.get(Calendar.YEAR),
+                        local.get(Calendar.MONTH),
+                        local.get(Calendar.DAY_OF_MONTH),
+                        0, 0, 0
+                    )
+                }
+                JournalLog.UNSCHEDULED -> {
+                    // Unscheduled is for tasks; if an event lands here, use today.
+                    val local = Calendar.getInstance()
                     cal.set(
                         local.get(Calendar.YEAR),
                         local.get(Calendar.MONTH),

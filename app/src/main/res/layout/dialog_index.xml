@@ -24,32 +24,18 @@
         android:paddingBottom="16dp"
         android:text="@string/index_subtitle" />
 
-    <TextView
-        android:id="@+id/indexDaily"
-        style="@style/TextMedium"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="serif"
-        android:paddingVertical="12dp"
-        tools:text="01  Daily Log" />
+        android:overScrollMode="never">
 
-    <TextView
-        android:id="@+id/indexMonthly"
-        style="@style/TextMedium"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="serif"
-        android:paddingVertical="12dp"
-        tools:text="02  Monthly Log" />
-
-    <TextView
-        android:id="@+id/indexFuture"
-        style="@style/TextMedium"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="serif"
-        android:paddingVertical="12dp"
-        tools:text="03  Future Log" />
+        <LinearLayout
+            android:id="@+id/indexList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            tools:ignore="UselessLeaf" />
+    </androidx.core.widget.NestedScrollView>
 
     <TextView
         style="@style/TextSmallLight"

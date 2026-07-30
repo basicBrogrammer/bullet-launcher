@@ -131,6 +131,43 @@ class JournalStore(context: Context) {
                     .thenBy { it.createdAt }
             )
 
+    fun getUnscheduled(): List<JournalEntry> =
+        getAll()
+            .filter { it.log == JournalLog.UNSCHEDULED }
+            .sortedWith(compareByDescending<JournalEntry> { it.priority }.thenBy { it.createdAt })
+
+    fun getForTag(tag: String): List<JournalEntry> {
+        val needle = normalizeTag(tag) ?: return emptyList()
+        return getAll()
+            .filter { entry ->
+                entry.type == BulletType.TASK &&
+                    entry.tags.any { normalizeTag(it) == needle }
+            }
+            .sortedWith(compareByDescending<JournalEntry> { it.priority }.thenBy { it.createdAt })
+    }
+
+    /** Tags that currently have at least one task — empty tags are omitted from the Index. */
+    fun getTagsWithTasks(): List<String> {
+        val counts = linkedMapOf<String, Pair<String, Int>>()
+        getAll().filter { it.type == BulletType.TASK }.forEach { entry ->
+            entry.tags.forEach { raw ->
+                val key = normalizeTag(raw) ?: return@forEach
+                val existing = counts[key]
+                if (existing == null) {
+                    counts[key] = raw.trim() to 1
+                } else {
+                    counts[key] = existing.first to (existing.second + 1)
+                }
+            }
+        }
+        return counts.values
+            .filter { it.second > 0 }
+            .map { it.first }
+            .sortedBy { it.lowercase(Locale.getDefault()) }
+    }
+
+    fun getAllTags(): List<String> = getTagsWithTasks()
+
     fun add(
         text: String,
         type: BulletType,
@@ -140,6 +177,8 @@ class JournalStore(context: Context) {
         calendarEventId: Long? = null,
         calendarId: Long? = null,
         fromCalendar: Boolean = false,
+        tags: List<String> = emptyList(),
+        timeMinutes: Int? = null,
     ): JournalEntry {
         val entry = JournalEntry(
             id = UUID.randomUUID().toString(),
@@ -151,6 +190,8 @@ class JournalStore(context: Context) {
             calendarEventId = calendarEventId,
             calendarId = calendarId,
             fromCalendar = fromCalendar,
+            tags = if (type == BulletType.TASK) sanitizeTags(tags) else emptyList(),
+            timeMinutes = if (type == BulletType.EVENT) timeMinutes else null,
         )
         val updated = getAll().toMutableList().apply { add(entry) }
         saveAll(updated)
@@ -174,6 +215,11 @@ class JournalStore(context: Context) {
         text: String,
         type: BulletType,
         priority: Boolean,
+        tags: List<String> = emptyList(),
+        log: JournalLog? = null,
+        dateKey: String? = null,
+        timeMinutes: Int? = null,
+        clearTime: Boolean = false,
     ): JournalEntry? {
         val all = getAll().toMutableList()
         val index = all.indexOfFirst { it.id == id }
@@ -185,6 +231,15 @@ class JournalStore(context: Context) {
             priority = priority,
             // Completing only applies to tasks; clear when changing away.
             completed = if (type == BulletType.TASK) current.completed else false,
+            tags = if (type == BulletType.TASK) sanitizeTags(tags) else emptyList(),
+            log = log ?: current.log,
+            dateKey = dateKey ?: current.dateKey,
+            timeMinutes = when {
+                type != BulletType.EVENT -> null
+                clearTime -> null
+                timeMinutes != null -> timeMinutes
+                else -> current.timeMinutes
+            },
         )
         all[index] = updated
         saveAll(all)
@@ -245,23 +300,19 @@ class JournalStore(context: Context) {
         }
         val today = todayKey()
         val month = currentMonthKey()
-        val samples = listOf(
-            Triple("Morning pages", BulletType.TASK, true),
-            Triple("Team standup", BulletType.EVENT, false),
-            Triple("Idea: simplify home gestures", BulletType.NOTE, false),
-            Triple("Review monthly goals", BulletType.TASK, false),
-        )
-        samples.forEachIndexed { index, (text, type, priority) ->
-            add(text, type, JournalLog.DAILY, today, priority)
-            if (index < 2) {
-                add(text, type, JournalLog.MONTHLY, today, priority)
-            }
-        }
+        add("Morning pages", BulletType.TASK, JournalLog.DAILY, today, true, tags = listOf("Personal"))
+        add("Team standup", BulletType.EVENT, JournalLog.DAILY, today, false)
+        add("Idea: simplify home gestures", BulletType.NOTE, JournalLog.DAILY, today, false)
+        add("Review monthly goals", BulletType.TASK, JournalLog.DAILY, today, false, tags = listOf("Work"))
+        add("Morning pages", BulletType.TASK, JournalLog.MONTHLY, today, true, tags = listOf("Personal"))
+        add("Team standup", BulletType.EVENT, JournalLog.MONTHLY, today, false)
+        add("Inbox triage", BulletType.TASK, JournalLog.UNSCHEDULED, JournalPages.UNSCHEDULED_KEY, false, tags = listOf("Work"))
+        add("Read design notes", BulletType.TASK, JournalLog.UNSCHEDULED, JournalPages.UNSCHEDULED_KEY, true, tags = listOf("Personal"))
         val futureMonths = futureMonthKeys(3)
         if (futureMonths.size >= 2) {
-            add("Vacation planning", BulletType.TASK, JournalLog.FUTURE, futureMonths[1], true)
+            add("Vacation planning", BulletType.TASK, JournalLog.FUTURE, futureMonths[1], true, tags = listOf("Personal"))
             add("Conference", BulletType.EVENT, JournalLog.FUTURE, futureMonths[1], false)
-            add("Ship v7", BulletType.TASK, JournalLog.FUTURE, futureMonths.getOrElse(2) { month }, false)
+            add("Ship v7", BulletType.TASK, JournalLog.FUTURE, futureMonths.getOrElse(2) { month }, false, tags = listOf("Work"))
         }
         prefs.edit { putBoolean(KEY_SEEDED, true) }
     }
@@ -289,6 +340,12 @@ class JournalStore(context: Context) {
                 put("calendarId", entry.calendarId)
             }
             put("fromCalendar", entry.fromCalendar)
+            if (entry.tags.isNotEmpty()) {
+                put("tags", JSONArray(entry.tags))
+            }
+            if (entry.timeMinutes != null) {
+                put("timeMinutes", entry.timeMinutes)
+            }
         }
 
     private fun parseEntry(obj: JSONObject): JournalEntry? {
@@ -307,15 +364,38 @@ class JournalStore(context: Context) {
                 calendarId = obj.optLong("calendarId", -1L)
                     .takeIf { it > 0L },
                 fromCalendar = obj.optBoolean("fromCalendar", false),
+                tags = parseTags(obj.optJSONArray("tags")),
+                timeMinutes = obj.optInt("timeMinutes", -1).takeIf { it in 0..1439 },
             )
         } catch (_: Exception) {
             null
         }
     }
 
+    private fun parseTags(array: JSONArray?): List<String> {
+        if (array == null) return emptyList()
+        return sanitizeTags((0 until array.length()).map { array.optString(it) })
+    }
+
     companion object {
         private const val PREFS_NAME = "app.olauncher.journal"
         private const val KEY_ENTRIES = "ENTRIES_JSON"
         private const val KEY_SEEDED = "SEEDED_SAMPLE"
+
+        fun normalizeTag(raw: String?): String? {
+            val trimmed = raw?.trim().orEmpty()
+            if (trimmed.isEmpty()) return null
+            return trimmed.lowercase(Locale.US)
+        }
+
+        fun sanitizeTags(tags: List<String>): List<String> {
+            val seen = linkedSetOf<String>()
+            val result = mutableListOf<String>()
+            tags.forEach { raw ->
+                val key = normalizeTag(raw) ?: return@forEach
+                if (seen.add(key)) result.add(raw.trim())
+            }
+            return result
+        }
     }
 }
