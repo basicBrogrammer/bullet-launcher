@@ -244,6 +244,10 @@ object CalendarSyncHelper {
      * When [Prefs.syncedCalendarsConfigured] is true, only events from
      * [Prefs.syncedCalendarIds] are imported — so the phone Calendar app can
      * still show work/other calendars that stay out of the bullet journal.
+     *
+     * Recurring (RRULE) events are imported for the current month's Daily log
+     * but never into the Future log, which is reserved for one-off upcoming
+     * events. Previously imported Future repeats are removed on the next sync.
      */
     fun syncIntoJournal(context: Context, store: JournalStore): Boolean {
         if (!hasCalendarPermissions(context)) return false
