@@ -50,15 +50,58 @@ object AddBulletDialog {
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_add_bullet, null)
         dialog.setContentView(view)
 
-        val sheetHeight = (context.resources.displayMetrics.heightPixels * 0.9f).toInt()
+        val sheetScroll = view.findViewById<android.widget.ScrollView>(R.id.sheetScroll)
+        val maxSheetHeight = (context.resources.displayMetrics.heightPixels * 0.9f).toInt()
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, sheetHeight)
+            // Cap at 90%; actual height follows content so footer isn't stranded
+            // at the bottom of empty space under the keyboard.
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             setGravity(Gravity.BOTTOM)
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            // Dim the journal behind the sheet.
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             attributes = attributes.apply { dimAmount = 0.45f }
+        }
+
+        fun clampSheetHeight() {
+            val window = dialog.window ?: return
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(
+                context.resources.displayMetrics.widthPixels,
+                View.MeasureSpec.EXACTLY,
+            )
+            // Let ScrollView wrap its children for an honest content height.
+            sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+            }
+            view.layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+            view.measure(
+                widthSpec,
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            )
+            val contentHeight = view.measuredHeight
+            if (contentHeight <= maxSheetHeight) {
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, contentHeight)
+                view.layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+            } else {
+                // Too tall: pin window to 90% and let the body scroll above the sticky footer.
+                val footerHeight = contentHeight - sheetScroll.measuredHeight
+                val scrollHeight = (maxSheetHeight - footerHeight).coerceAtLeast(dp(context, 120))
+                sheetScroll.layoutParams = sheetScroll.layoutParams.apply {
+                    height = scrollHeight
+                }
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, maxSheetHeight)
+                view.layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    maxSheetHeight,
+                )
+            }
+            view.requestLayout()
         }
 
         val title = view.findViewById<TextView>(R.id.dialogTitle)
@@ -152,6 +195,7 @@ object AddBulletDialog {
             selectedTags.add(key)
             newTagInput.text = null
             rebuildTagRows()
+            clampSheetHeight()
         }
 
         rebuildTagRows()
@@ -188,6 +232,7 @@ object AddBulletDialog {
                 if (selectedType == BulletType.TASK) View.VISIBLE else View.GONE
             calendarSection.visibility =
                 if (selectedType == BulletType.EVENT) View.VISIBLE else View.GONE
+            if (dialog.isShowing) clampSheetHeight()
         }
 
         fun refreshPriority() {
@@ -243,15 +288,11 @@ object AddBulletDialog {
         }
 
         view.setBackgroundColor(context.getColorFromAttr(R.attr.dialogShadeColor))
-        // Dialog content parent is a FrameLayout; plain ViewGroup.LayoutParams
-        // crashes measure with ClassCastException (needs MarginLayoutParams).
-        view.layoutParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-        )
         priorityIcon.setColorFilter(context.getColorFromAttr(R.attr.primaryColor))
 
+        dialog.setOnShowListener { clampSheetHeight() }
         dialog.show()
+        clampSheetHeight()
         input.requestFocus()
     }
 

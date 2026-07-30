@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Structure: scrollable body + sticky footer.
+  The dialog window is capped at 90% screen height but sizes to content,
+  so priority/actions stay just under the form (not stranded at the bottom
+  of empty space where the keyboard covers them).
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingHorizontal="20dp"
     android:paddingTop="8dp"
-    android:paddingBottom="20dp">
+    android:paddingBottom="12dp">
 
     <View
         android:layout_width="40dp"
@@ -15,190 +21,198 @@
         android:layout_marginBottom="12dp"
         android:background="@drawable/bg_bottom_sheet_handle" />
 
-    <TextView
-        android:id="@+id/dialogTitle"
-        style="@style/TextSmallBold"
+    <ScrollView
+        android:id="@+id/sheetScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="serif"
-        android:letterSpacing="0.12"
-        android:paddingBottom="8dp"
-        android:text="@string/add_entry"
-        android:textAllCaps="true" />
-
-    <EditText
-        android:id="@+id/entryInput"
-        style="@style/TextMedium"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        android:fontFamily="serif"
-        android:hint="@string/entry_hint"
-        android:imeOptions="actionDone"
-        android:importantForAutofill="no"
-        android:inputType="textCapSentences|textMultiLine"
-        android:maxLines="4"
-        android:minLines="2"
-        android:paddingVertical="12dp" />
-
-    <TextView
-        style="@style/TextSmall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="serif"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp"
-        android:text="@string/rapid_logging"
-        android:textAllCaps="true" />
-
-    <LinearLayout
-        android:id="@+id/typeRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingBottom="8dp">
-
-        <TextView
-            android:id="@+id/typeTask"
-            style="@style/TextMedium"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fontFamily="serif"
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/bullet_task" />
-
-        <TextView
-            android:id="@+id/typeEvent"
-            style="@style/TextMedium"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fontFamily="serif"
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/bullet_event" />
-
-        <TextView
-            android:id="@+id/typeNote"
-            style="@style/TextMedium"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fontFamily="serif"
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/bullet_note" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/tagsSection"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <TextView
-            style="@style/TextSmall"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="serif"
-            android:paddingBottom="4dp"
-            android:text="@string/tags_label"
-            android:textAllCaps="true" />
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="true"
-            android:overScrollMode="never">
-
-            <LinearLayout
-                android:id="@+id/tagChipGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </ScrollView>
+        android:fillViewport="false"
+        android:overScrollMode="never"
+        android:scrollbars="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingTop="4dp">
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/dialogTitle"
+                style="@style/TextSmallBold"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:letterSpacing="0.12"
+                android:paddingBottom="8dp"
+                android:text="@string/add_entry"
+                android:textAllCaps="true" />
 
             <EditText
-                android:id="@+id/newTagInput"
+                android:id="@+id/entryInput"
                 style="@style/TextMedium"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:fontFamily="serif"
-                android:hint="@string/new_tag_hint"
+                android:hint="@string/entry_hint"
                 android:imeOptions="actionDone"
                 android:importantForAutofill="no"
-                android:inputType="textCapWords"
-                android:maxLines="1"
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="3"
+                android:minLines="1"
                 android:paddingVertical="8dp" />
 
             <TextView
-                android:id="@+id/addTagButton"
-                style="@style/TextMedium"
-                android:layout_width="wrap_content"
+                style="@style/TextSmall"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="12dp"
-                android:text="@string/add_tag"
-                android:textStyle="bold" />
+                android:fontFamily="serif"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                android:text="@string/rapid_logging"
+                android:textAllCaps="true" />
+
+            <LinearLayout
+                android:id="@+id/typeRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:id="@+id/typeTask"
+                    style="@style/TextMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="serif"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:text="@string/bullet_task" />
+
+                <TextView
+                    android:id="@+id/typeEvent"
+                    style="@style/TextMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="serif"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:text="@string/bullet_event" />
+
+                <TextView
+                    android:id="@+id/typeNote"
+                    style="@style/TextMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="serif"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:text="@string/bullet_note" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tagsSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    style="@style/TextSmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="serif"
+                    android:paddingBottom="4dp"
+                    android:text="@string/tags_label"
+                    android:textAllCaps="true" />
+
+                <LinearLayout
+                    android:id="@+id/tagChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp">
+
+                    <EditText
+                        android:id="@+id/newTagInput"
+                        style="@style/TextMedium"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@android:color/transparent"
+                        android:fontFamily="serif"
+                        android:hint="@string/new_tag_hint"
+                        android:imeOptions="actionDone"
+                        android:importantForAutofill="no"
+                        android:inputType="textCapWords"
+                        android:maxLines="1"
+                        android:paddingVertical="8dp" />
+
+                    <TextView
+                        android:id="@+id/addTagButton"
+                        style="@style/TextMedium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:text="@string/add_tag"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/calendarSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="4dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    style="@style/TextSmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="serif"
+                    android:paddingBottom="4dp"
+                    android:text="@string/choose_calendar"
+                    android:textAllCaps="true" />
+
+                <Spinner
+                    android:id="@+id/calendarSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:paddingVertical="4dp" />
+
+                <TextView
+                    android:id="@+id/calendarSyncHint"
+                    style="@style/TextSmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="serif"
+                    android:paddingTop="4dp"
+                    android:text="@string/event_calendar_sync_hint" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </ScrollView>
 
-    <LinearLayout
-        android:id="@+id/calendarSection"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingBottom="4dp"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <TextView
-            style="@style/TextSmall"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="serif"
-            android:paddingBottom="4dp"
-            android:text="@string/choose_calendar"
-            android:textAllCaps="true" />
-
-        <Spinner
-            android:id="@+id/calendarSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:paddingVertical="4dp" />
-
-        <TextView
-            android:id="@+id/calendarSyncHint"
-            style="@style/TextSmall"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="serif"
-            android:paddingTop="4dp"
-            android:text="@string/event_calendar_sync_hint" />
-    </LinearLayout>
-
+    <!-- Sticky footer: always sits just under content / above the keyboard -->
     <LinearLayout
         android:id="@+id/priorityRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingVertical="10dp">
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
 
         <ImageView
             android:id="@+id/priorityIcon"
@@ -221,8 +235,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="end"
-        android:orientation="horizontal"
-        android:paddingTop="8dp">
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/deleteButton"
