@@ -291,6 +291,11 @@ class JournalStore(context: Context) {
 
     fun getById(id: String): JournalEntry? = getAll().find { it.id == id }
 
+    /**
+     * First-launch guided walkthrough: seeds sample tasks, events, and notes so
+     * a new home screen already demonstrates rapid logging across Daily,
+     * Monthly, Future, and Unscheduled collections.
+     */
     fun ensureSampleData() {
         if (prefs.getBoolean(KEY_SEEDED, false)) return
         if (getAll().isNotEmpty()) {
@@ -299,21 +304,115 @@ class JournalStore(context: Context) {
         }
         val today = todayKey()
         val month = currentMonthKey()
-        add("Morning pages", BulletType.TASK, JournalLog.DAILY, today, true, tags = listOf("Personal"))
-        add("Team standup", BulletType.EVENT, JournalLog.DAILY, today, false)
-        add("Idea: simplify home gestures", BulletType.NOTE, JournalLog.DAILY, today, false)
-        add("Review monthly goals", BulletType.TASK, JournalLog.DAILY, today, false, tags = listOf("Work"))
-        add("Morning pages", BulletType.TASK, JournalLog.MONTHLY, today, true, tags = listOf("Personal"))
-        add("Team standup", BulletType.EVENT, JournalLog.MONTHLY, today, false)
-        add("Inbox triage", BulletType.TASK, JournalLog.UNSCHEDULED, JournalPages.UNSCHEDULED_KEY, false, tags = listOf("Work"))
-        add("Read design notes", BulletType.TASK, JournalLog.UNSCHEDULED, JournalPages.UNSCHEDULED_KEY, true, tags = listOf("Personal"))
+        val yesterday = offsetDayKey(-1)
+        val tomorrow = offsetDayKey(1)
+
+        // Daily log — mix of types that teaches the bullet legend by example
+        add(
+            "Morning pages",
+            BulletType.TASK,
+            JournalLog.DAILY,
+            today,
+            priority = true,
+            tags = listOf("Personal"),
+        )
+        add(
+            "Team standup",
+            BulletType.EVENT,
+            JournalLog.DAILY,
+            today,
+            timeMinutes = 10 * 60,
+        )
+        add(
+            "Tip: tap a task to complete · long-press to edit",
+            BulletType.NOTE,
+            JournalLog.DAILY,
+            today,
+        )
+        add(
+            "Idea: swipe between Monthly · Daily · Future",
+            BulletType.NOTE,
+            JournalLog.DAILY,
+            today,
+        )
+        add(
+            "Review monthly goals",
+            BulletType.TASK,
+            JournalLog.DAILY,
+            today,
+            tags = listOf("Work"),
+        )
+        add(
+            "Dentist",
+            BulletType.EVENT,
+            JournalLog.DAILY,
+            today,
+            timeMinutes = 15 * 60 + 30,
+        )
+
+        // Monthly log — today plus a couple of nearby days
+        add("Morning pages", BulletType.TASK, JournalLog.MONTHLY, today, priority = true, tags = listOf("Personal"))
+        add("Team standup", BulletType.EVENT, JournalLog.MONTHLY, today, timeMinutes = 10 * 60)
+        add("Grocery run", BulletType.TASK, JournalLog.MONTHLY, yesterday, tags = listOf("Personal"))
+        add("Ship journal home", BulletType.TASK, JournalLog.MONTHLY, tomorrow, tags = listOf("Work"))
+        add("Weekly review", BulletType.NOTE, JournalLog.MONTHLY, tomorrow)
+
+        // Unscheduled inbox + tagged collections (Index)
+        add(
+            "Inbox triage",
+            BulletType.TASK,
+            JournalLog.UNSCHEDULED,
+            JournalPages.UNSCHEDULED_KEY,
+            tags = listOf("Work"),
+        )
+        add(
+            "Read design notes",
+            BulletType.TASK,
+            JournalLog.UNSCHEDULED,
+            JournalPages.UNSCHEDULED_KEY,
+            priority = true,
+            tags = listOf("Personal"),
+        )
+        add(
+            "Tip: open Index for Unscheduled and tags",
+            BulletType.NOTE,
+            JournalLog.UNSCHEDULED,
+            JournalPages.UNSCHEDULED_KEY,
+        )
+
+        // Future log — looking ahead
         val futureMonths = futureMonthKeys(3)
         if (futureMonths.size >= 2) {
-            add("Vacation planning", BulletType.TASK, JournalLog.FUTURE, futureMonths[1], true, tags = listOf("Personal"))
-            add("Conference", BulletType.EVENT, JournalLog.FUTURE, futureMonths[1], false)
-            add("Ship v7", BulletType.TASK, JournalLog.FUTURE, futureMonths.getOrElse(2) { month }, false, tags = listOf("Work"))
+            add(
+                "Vacation planning",
+                BulletType.TASK,
+                JournalLog.FUTURE,
+                futureMonths[1],
+                priority = true,
+                tags = listOf("Personal"),
+            )
+            add("Conference", BulletType.EVENT, JournalLog.FUTURE, futureMonths[1])
+            add(
+                "Ship v7",
+                BulletType.TASK,
+                JournalLog.FUTURE,
+                futureMonths.getOrElse(2) { month },
+                tags = listOf("Work"),
+            )
+            add(
+                "Tip: swipe up for apps · drawer button for all apps",
+                BulletType.NOTE,
+                JournalLog.FUTURE,
+                futureMonths[1],
+            )
         }
         prefs.edit { putBoolean(KEY_SEEDED, true) }
+    }
+
+    private fun offsetDayKey(days: Int): String {
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.DAY_OF_YEAR, days)
+        return dayFormat.format(cal.time)
     }
 
     private fun saveAll(entries: List<JournalEntry>) {
