@@ -95,6 +95,13 @@ class Prefs(context: Context) {
     private val CALENDAR_APP_USER = "CALENDAR_APP_USER"
     private val CALENDAR_APP_CLASS_NAME = "CALENDAR_APP_CLASS_NAME"
     private val PREFERRED_CALENDAR_ID = "PREFERRED_CALENDAR_ID"
+    private val SYNCED_CALENDAR_IDS = "SYNCED_CALENDAR_IDS"
+    private val SYNCED_CALENDARS_CONFIGURED = "SYNCED_CALENDARS_CONFIGURED"
+    private val HOME_SCRIM = "HOME_SCRIM"
+    private val WEATHER_CACHE_TEXT = "WEATHER_CACHE_TEXT"
+    private val WEATHER_CACHE_FETCHED_AT = "WEATHER_CACHE_FETCHED_AT"
+    private val WEATHER_CACHE_LAT = "WEATHER_CACHE_LAT"
+    private val WEATHER_CACHE_LON = "WEATHER_CACHE_LON"
     private val SCREEN_TIME_APP_PACKAGE = "SCREEN_TIME_APP_PACKAGE"
     private val SCREEN_TIME_APP_USER = "SCREEN_TIME_APP_USER"
     private val SCREEN_TIME_APP_CLASS_NAME = "SCREEN_TIME_APP_CLASS_NAME"
@@ -164,7 +171,7 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(DAILY_WALLPAPER_URL, value).apply() }
 
     var homeAppsNum: Int
-        get() = prefs.getInt(HOME_APPS_NUM, 4).coerceIn(0, Constants.MAX_HOME_APPS)
+        get() = prefs.getInt(HOME_APPS_NUM, Constants.MAX_HOME_APPS).coerceIn(0, Constants.MAX_HOME_APPS)
         set(value) = prefs.edit { putInt(HOME_APPS_NUM, value.coerceIn(0, Constants.MAX_HOME_APPS)).apply() }
 
     /** Whether the home apps bottom sheet shows 3 rows (true) or 1 row (false). */
@@ -458,6 +465,45 @@ class Prefs(context: Context) {
     var preferredCalendarId: Long
         get() = prefs.getLong(PREFERRED_CALENDAR_ID, -1L)
         set(value) = prefs.edit { putLong(PREFERRED_CALENDAR_ID, value).apply() }
+
+    /**
+     * Whether the user has chosen which calendars appear as journal Event bullets.
+     * When false, all visible calendars are synced (legacy default).
+     */
+    var syncedCalendarsConfigured: Boolean
+        get() = prefs.getBoolean(SYNCED_CALENDARS_CONFIGURED, false)
+        set(value) = prefs.edit { putBoolean(SYNCED_CALENDARS_CONFIGURED, value).apply() }
+
+    /** Calendar IDs whose events are pulled into the bullet journal. */
+    var syncedCalendarIds: Set<Long>
+        get() = prefs.getStringSet(SYNCED_CALENDAR_IDS, emptySet())
+            ?.mapNotNull { it.toLongOrNull() }
+            ?.toSet()
+            ?: emptySet()
+        set(value) = prefs.edit {
+            putStringSet(SYNCED_CALENDAR_IDS, value.map { it.toString() }.toSet()).apply()
+        }
+
+    /** Smoky translucent surface between wallpaper and home text. */
+    var homeScrimEnabled: Boolean
+        get() = prefs.getBoolean(HOME_SCRIM, false)
+        set(value) = prefs.edit { putBoolean(HOME_SCRIM, value).apply() }
+
+    var weatherCacheText: String
+        get() = prefs.getString(WEATHER_CACHE_TEXT, "").orEmpty()
+        set(value) = prefs.edit { putString(WEATHER_CACHE_TEXT, value).apply() }
+
+    var weatherCacheFetchedAt: Long
+        get() = prefs.getLong(WEATHER_CACHE_FETCHED_AT, 0L)
+        set(value) = prefs.edit { putLong(WEATHER_CACHE_FETCHED_AT, value).apply() }
+
+    var weatherCacheLat: Float
+        get() = prefs.getFloat(WEATHER_CACHE_LAT, 0f)
+        set(value) = prefs.edit { putFloat(WEATHER_CACHE_LAT, value).apply() }
+
+    var weatherCacheLon: Float
+        get() = prefs.getFloat(WEATHER_CACHE_LON, 0f)
+        set(value) = prefs.edit { putFloat(WEATHER_CACHE_LON, value).apply() }
 
     var screenTimeAppPackage: String
         get() = prefs.getString(SCREEN_TIME_APP_PACKAGE, "").toString()

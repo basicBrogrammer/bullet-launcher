@@ -230,26 +230,38 @@ class ScreenshotDemoTest {
         root.findViewById<View>(R.id.addBulletButton).visibility = View.GONE
     }
 
-    private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean) {
-        root.findViewById<View>(R.id.dateTimeLayout).visibility = View.GONE
+    private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean, scrim: Boolean = true) {
+        root.findViewById<View>(R.id.homeScrim).visibility = if (scrim) View.VISIBLE else View.GONE
+        root.findViewById<View>(R.id.dateTimeLayout).visibility = View.VISIBLE
+        root.findViewById<TextView>(R.id.clock).apply {
+            visibility = View.VISIBLE
+            // TextClock may not tick under Robolectric; set text via reflection-friendly content.
+            text = "9:41"
+        }
+        root.findViewById<View>(R.id.date).visibility = View.GONE
+        root.findViewById<TextView>(R.id.weather).apply {
+            visibility = View.VISIBLE
+            text = "72° Clear"
+        }
         root.findViewById<View>(R.id.journalPager).visibility = View.GONE
 
         val journal = LayoutInflater.from(activity).inflate(R.layout.page_journal_log, null)
         val host = root as ViewGroup
         host.addView(
             journal,
-            2,
+            3,
             FrameMatch(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             ),
         )
+        val density = activity.resources.displayMetrics.density
         val bottomPad = if (expanded) 260 else 140
         journal.setPadding(
             0,
-            (48 * activity.resources.displayMetrics.density).toInt(),
+            (92 * density).toInt(),
             0,
-            (bottomPad * activity.resources.displayMetrics.density).toInt(),
+            (bottomPad * density).toInt(),
         )
         journal.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
         journal.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
@@ -284,7 +296,6 @@ class ScreenshotDemoTest {
             R.id.homeApp14 to "Contacts",
             R.id.homeApp15 to "Calculator",
         )
-        val density = activity.resources.displayMetrics.density
         val iconPx = (48 * density).toInt()
         val visibleCount = if (expanded) homeApps.size else 5
         homeApps.forEachIndexed { index, (id, label) ->
@@ -307,6 +318,19 @@ class ScreenshotDemoTest {
         val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
         fabParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
         fab.layoutParams = fabParams
+    }
+
+    @Test
+    fun homeWithScrim() = capture("06d_home_scrim", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = false, scrim = true)
+    }
+
+    @Test
+    fun settingsCleaned() = capture("08_settings", R.layout.fragment_settings) { _, root ->
+        root.findViewById<TextView>(R.id.syncCalendars).text = "2 selected"
+        root.findViewById<TextView>(R.id.homeScrim).setText(R.string.on)
+        root.findViewById<TextView>(R.id.dateTime).setText(R.string.on)
+        root.findViewById<TextView>(R.id.dailyWallpaper).setText(R.string.off)
     }
 
     @Test

@@ -223,4 +223,14 @@
     <string name="index_future_row">03    Future Log</string>
     <string name="expand_apps_sheet">Show more apps</string>
     <string name="collapse_apps_sheet">Show fewer apps</string>
+    <string name="show_clock">Show clock</string>
+    <string name="weather_location_permission">Allow location access to show weather</string>
+    <string name="sync_calendars">Calendars to sync</string>
+    <string name="sync_calendars_subtitle">Choose which calendars appear as Event bullets. Other calendars stay in your Calendar app only.</string>
+    <string name="sync_calendars_all">All calendars</string>
+    <string name="sync_calendars_none">None selected</string>
+    <string name="sync_calendars_count">%d selected</string>
+    <string name="sync_calendars_permission">Allow calendar access to choose calendars</string>
+    <string name="home_scrim">Smoky text backdrop</string>
+    <string name="done">Done</string>
 </resources>
