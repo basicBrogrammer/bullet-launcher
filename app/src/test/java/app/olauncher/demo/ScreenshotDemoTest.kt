@@ -259,7 +259,7 @@ class ScreenshotDemoTest {
         val bottomPad = if (expanded) 260 else 140
         journal.setPadding(
             0,
-            (72 * density).toInt(),
+            (92 * density).toInt(),
             0,
             (bottomPad * density).toInt(),
         )
