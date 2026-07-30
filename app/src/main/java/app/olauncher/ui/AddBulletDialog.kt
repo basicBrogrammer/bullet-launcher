@@ -60,7 +60,7 @@ object AddBulletDialog {
             setGravity(Gravity.BOTTOM)
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            attributes = attributes.apply { dimAmount = 0.45f }
+            attributes = attributes.apply { dimAmount = 0.55f }
         }
 
         fun clampSheetHeight() {
@@ -287,7 +287,8 @@ object AddBulletDialog {
             dialog.dismiss()
         }
 
-        view.setBackgroundColor(context.getColorFromAttr(R.attr.dialogShadeColor))
+        // Opaque paper/grey surface (same as drawer) so wallpaper doesn't show through.
+        view.setBackgroundColor(context.getColorFromAttr(R.attr.drawerBackgroundColor))
         priorityIcon.setColorFilter(context.getColorFromAttr(R.attr.primaryColor))
 
         dialog.setOnShowListener { clampSheetHeight() }
