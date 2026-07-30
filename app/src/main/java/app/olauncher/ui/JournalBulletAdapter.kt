@@ -107,7 +107,7 @@ class JournalBulletAdapter(
         entry: JournalEntry,
     ) {
         symbol.text = entry.displaySymbol()
-        text.text = entry.text
+        text.text = entry.displayText()
         text.paintFlags = if (entry.completed) {
             text.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
         } else {

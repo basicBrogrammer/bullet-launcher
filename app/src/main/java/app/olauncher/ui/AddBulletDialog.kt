@@ -1,6 +1,8 @@
 package app.olauncher.ui
 
+import android.app.DatePickerDialog
 import android.app.Dialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -22,13 +24,18 @@ import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import app.olauncher.R
 import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
+import app.olauncher.data.JournalLog
 import app.olauncher.data.JournalStore
 import app.olauncher.helper.CalendarSyncHelper
 import app.olauncher.helper.getColorFromAttr
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 object AddBulletDialog {
 
@@ -38,6 +45,10 @@ object AddBulletDialog {
         val priority: Boolean,
         val tags: List<String>,
         val calendarId: Long?,
+        /** yyyy-MM-dd when scheduled; null = Unscheduled. */
+        val scheduledDateKey: String?,
+        /** Minutes from midnight for timed events; null = all-day / none. */
+        val timeMinutes: Int?,
     )
 
     fun show(
@@ -156,6 +167,8 @@ object AddBulletDialog {
 
         val title = sheet.findViewById<TextView>(R.id.dialogTitle)
         val input = sheet.findViewById<EditText>(R.id.entryInput)
+        val scheduleValue = sheet.findViewById<TextView>(R.id.scheduleValue)
+        val scheduleClear = sheet.findViewById<TextView>(R.id.scheduleClear)
         val typeTask = sheet.findViewById<TextView>(R.id.typeTask)
         val typeEvent = sheet.findViewById<TextView>(R.id.typeEvent)
         val typeNote = sheet.findViewById<TextView>(R.id.typeNote)
@@ -177,6 +190,102 @@ object AddBulletDialog {
         val selectedAlpha = 1f
         val dimAlpha = 0.45f
         val editing = existing != null
+        val dayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val displayFormat = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
+        val timeDisplayFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+
+        // null schedule = Unscheduled (Index). Picker still opens on "today".
+        var scheduledDate: Calendar? = existing?.let { entry ->
+            when (entry.log) {
+                JournalLog.UNSCHEDULED -> null
+                JournalLog.FUTURE -> {
+                    // Month key → first of that month for the picker.
+                    runCatching {
+                        Calendar.getInstance().apply {
+                            time = SimpleDateFormat("yyyy-MM", Locale.US).parse(entry.dateKey)!!
+                            set(Calendar.DAY_OF_MONTH, 1)
+                        }
+                    }.getOrNull()
+                }
+                else -> runCatching {
+                    Calendar.getInstance().apply { time = dayFormat.parse(entry.dateKey)!! }
+                }.getOrNull()
+            }
+        }
+        var scheduledTimeMinutes: Int? = existing?.timeMinutes
+
+        fun refreshScheduleLabel() {
+            val date = scheduledDate
+            if (date == null) {
+                scheduleValue.setText(R.string.schedule_unscheduled)
+                scheduleClear.isVisible = false
+            } else {
+                val datePart = displayFormat.format(date.time)
+                val timePart = scheduledTimeMinutes?.let { minutes ->
+                    val cal = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, minutes / 60)
+                        set(Calendar.MINUTE, minutes % 60)
+                    }
+                    timeDisplayFormat.format(cal.time)
+                }
+                scheduleValue.text = if (timePart != null) "$datePart · $timePart" else datePart
+                scheduleClear.isVisible = true
+            }
+        }
+
+        fun openTimePicker() {
+            val initial = scheduledTimeMinutes
+            val hour = initial?.div(60) ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            val minute = initial?.rem(60) ?: 0
+            TimePickerDialog(
+                context,
+                { _, h, m ->
+                    scheduledTimeMinutes = h * 60 + m
+                    refreshScheduleLabel()
+                },
+                hour,
+                minute,
+                false,
+            ).apply {
+                setOnCancelListener {
+                    // Keep the date; leave time unset (all-day).
+                    if (scheduledTimeMinutes == null) refreshScheduleLabel()
+                }
+            }.show()
+        }
+
+        fun openDatePicker() {
+            val initial = scheduledDate ?: Calendar.getInstance()
+            DatePickerDialog(
+                context,
+                { _, year, month, day ->
+                    scheduledDate = Calendar.getInstance().apply {
+                        set(year, month, day, 0, 0, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    if (selectedType != BulletType.EVENT) {
+                        scheduledTimeMinutes = null
+                    }
+                    refreshScheduleLabel()
+                    if (selectedType == BulletType.EVENT) {
+                        openTimePicker()
+                    }
+                    clampSheetHeight()
+                },
+                initial.get(Calendar.YEAR),
+                initial.get(Calendar.MONTH),
+                initial.get(Calendar.DAY_OF_MONTH),
+            ).show()
+        }
+
+        scheduleValue.setOnClickListener { openDatePicker() }
+        scheduleClear.setOnClickListener {
+            scheduledDate = null
+            scheduledTimeMinutes = null
+            refreshScheduleLabel()
+            clampSheetHeight()
+        }
+        refreshScheduleLabel()
 
         val selectedTags = linkedSetOf<String>()
         val knownTags = linkedMapOf<String, String>() // normalized -> display
@@ -282,6 +391,10 @@ object AddBulletDialog {
                 if (selectedType == BulletType.TASK) View.VISIBLE else View.GONE
             calendarSection.visibility =
                 if (selectedType == BulletType.EVENT) View.VISIBLE else View.GONE
+            if (selectedType != BulletType.EVENT) {
+                scheduledTimeMinutes = null
+                refreshScheduleLabel()
+            }
             if (dialog.isShowing) clampSheetHeight()
         }
 
@@ -333,7 +446,19 @@ object AddBulletDialog {
             } else {
                 null
             }
-            onSave(Result(text, selectedType, priority, tags, calendarId))
+            val dateKey = scheduledDate?.let { dayFormat.format(it.time) }
+            val time = if (selectedType == BulletType.EVENT) scheduledTimeMinutes else null
+            onSave(
+                Result(
+                    text = text,
+                    type = selectedType,
+                    priority = priority,
+                    tags = tags,
+                    calendarId = calendarId,
+                    scheduledDateKey = dateKey,
+                    timeMinutes = time,
+                )
+            )
             dialog.dismiss()
         }
 

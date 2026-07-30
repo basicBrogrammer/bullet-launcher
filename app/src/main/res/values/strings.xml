@@ -193,7 +193,11 @@
     <string name="future_log">Future Log</string>
     <string name="future_log_subtitle">Looking ahead</string>
     <string name="unscheduled_log">Unscheduled</string>
-    <string name="unscheduled_log_subtitle">Tasks without a date</string>
+    <string name="schedule_label">When</string>
+    <string name="schedule_unscheduled">Unscheduled</string>
+    <string name="schedule_clear">Clear</string>
+    <string name="schedule_pick_time">Add time</string>
+    <string name="unscheduled_log_subtitle">Entries without a date</string>
     <string name="tag_log_subtitle">Tagged tasks</string>
     <string name="add_entry">New entry</string>
     <string name="edit_entry">Edit entry</string>

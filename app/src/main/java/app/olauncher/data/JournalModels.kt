@@ -51,10 +51,23 @@ data class JournalEntry(
     val fromCalendar: Boolean = false,
     /** Topic tags (primarily for tasks); used by the Index collections. */
     val tags: List<String> = emptyList(),
+    /** Minutes from midnight for timed events; null = all-day / no time. */
+    val timeMinutes: Int? = null,
 ) {
     fun displaySymbol(): String = when {
         type == BulletType.TASK && completed -> "×"
         else -> type.symbol
+    }
+
+    /** Title with optional timed-event suffix for list rows. */
+    fun displayText(): String {
+        val minutes = timeMinutes ?: return text
+        if (type != BulletType.EVENT) return text
+        // Imported events may already include " · HH:mm" in [text].
+        if (text.contains(" · ")) return text
+        val hour = minutes / 60
+        val minute = minutes % 60
+        return String.format(java.util.Locale.getDefault(), "%s · %02d:%02d", text, hour, minute)
     }
 }
 

@@ -67,6 +67,46 @@
                 android:fontFamily="serif"
                 android:paddingTop="8dp"
                 android:paddingBottom="4dp"
+                android:text="@string/schedule_label"
+                android:textAllCaps="true" />
+
+            <LinearLayout
+                android:id="@+id/scheduleRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:id="@+id/scheduleValue"
+                    style="@style/TextMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="serif"
+                    android:paddingVertical="10dp"
+                    android:text="@string/schedule_unscheduled"
+                    tools:text="Wed, 30 Jul · 3:30 PM" />
+
+                <TextView
+                    android:id="@+id/scheduleClear"
+                    style="@style/TextMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp"
+                    android:text="@string/schedule_clear"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/TextSmall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
                 android:text="@string/rapid_logging"
                 android:textAllCaps="true" />
 

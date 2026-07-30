@@ -94,6 +94,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         /** When set, calendar sync attaches to this existing journal entry. */
         val existingId: String? = null,
         val calendarId: Long? = null,
+        val timeMinutes: Int? = null,
     )
 
     private val calendarPermissionLauncher = registerForActivityResult(
@@ -505,7 +506,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             preferredCalendarId = prefs.preferredCalendarId,
             preselectedTags = preselectedTags,
             onSave = { result ->
-                val (log, dateKey) = resolveAddTarget(result.type)
+                val (log, dateKey) = resolveScheduleTarget(result.scheduledDateKey)
                 if (result.type == BulletType.EVENT) {
                     beginEventSave(
                         text = result.text,
@@ -513,6 +514,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                         log = log,
                         dateKey = dateKey,
                         calendarId = result.calendarId,
+                        timeMinutes = result.timeMinutes,
                     )
                 } else {
                     journalStore.add(
@@ -529,15 +531,21 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         )
     }
 
-    private fun resolveAddTarget(type: BulletType): Pair<JournalLog, String> {
-        val collection = openCollection
-        if (collection is IndexDestination.Unscheduled && type == BulletType.TASK) {
+    /**
+     * Empty schedule → Unscheduled. A picked day goes to the Daily log for that
+     * dateKey (Monthly already aggregates daily entries for the current month);
+     * days in a later month go to the Future log for that month.
+     */
+    private fun resolveScheduleTarget(scheduledDateKey: String?): Pair<JournalLog, String> {
+        if (scheduledDateKey.isNullOrBlank()) {
             return JournalLog.UNSCHEDULED to JournalPages.UNSCHEDULED_KEY
         }
-        return when (binding.journalPager.currentItem) {
-            JournalPages.MONTHLY -> JournalLog.MONTHLY to journalStore.todayKey()
-            JournalPages.FUTURE -> JournalLog.FUTURE to journalStore.futureMonthKeys(1).first()
-            else -> JournalLog.DAILY to journalStore.todayKey()
+        val monthKey = scheduledDateKey.take(7)
+        val currentMonth = journalStore.currentMonthKey()
+        return if (monthKey > currentMonth) {
+            JournalLog.FUTURE to monthKey
+        } else {
+            JournalLog.DAILY to scheduledDateKey
         }
     }
 
@@ -557,6 +565,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                     priority = result.priority,
                     tags = result.tags,
                     calendarId = result.calendarId,
+                    scheduledDateKey = result.scheduledDateKey,
+                    timeMinutes = result.timeMinutes,
                 )
             },
             onDelete = { deleteJournalEntry(entry) },
@@ -570,20 +580,41 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         priority: Boolean,
         tags: List<String>,
         calendarId: Long?,
+        scheduledDateKey: String?,
+        timeMinutes: Int?,
     ) {
         val wasEvent = original.type == BulletType.EVENT
-        val updated = journalStore.update(original.id, text, type, priority, tags) ?: return
+        val (log, dateKey) = resolveScheduleTarget(scheduledDateKey)
+        val updated = journalStore.update(
+            id = original.id,
+            text = text,
+            type = type,
+            priority = priority,
+            tags = tags,
+            log = log,
+            dateKey = dateKey,
+            timeMinutes = timeMinutes,
+            clearTime = type != BulletType.EVENT || timeMinutes == null,
+        ) ?: return
 
         when {
-            // Newly an event (or still unlinked): sync to the chosen calendar.
+            // Newly an event (or still unlinked): sync to the chosen calendar when scheduled.
             type == BulletType.EVENT && updated.calendarEventId == null -> {
-                beginEventLinkForExisting(updated, calendarId)
-                return
+                if (updated.log != JournalLog.UNSCHEDULED) {
+                    beginEventLinkForExisting(updated, calendarId)
+                    return
+                }
             }
             // Still an event with a calendar link: push title change; maybe move calendar.
             type == BulletType.EVENT && updated.calendarEventId != null -> {
-                if (calendarId != null && calendarId != updated.calendarId) {
-                    // Relink by deleting + reinserting into the newly selected calendar.
+                if (updated.log == JournalLog.UNSCHEDULED) {
+                    CalendarSyncHelper.deleteEvent(
+                        requireContext(),
+                        updated.calendarEventId,
+                        fromCalendar = updated.fromCalendar,
+                    )
+                    journalStore.setCalendarLink(updated.id, null, null, fromCalendar = false)
+                } else if (calendarId != null && calendarId != updated.calendarId) {
                     CalendarSyncHelper.deleteEvent(
                         requireContext(),
                         updated.calendarEventId,
@@ -595,8 +626,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                         calendarId,
                     )
                     return
+                } else {
+                    CalendarSyncHelper.updateEvent(requireContext(), updated)
                 }
-                CalendarSyncHelper.updateEvent(requireContext(), updated)
             }
             // Was an event, now something else: drop the calendar event.
             wasEvent && type != BulletType.EVENT -> {
@@ -619,7 +651,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             dateKey = entry.dateKey,
             existingId = entry.id,
             calendarId = calendarId,
+            timeMinutes = entry.timeMinutes,
         )
+        if (entry.log == JournalLog.UNSCHEDULED) {
+            refreshJournal()
+            return
+        }
         if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
             pendingEventDraft = draft
             calendarPermissionLauncher.launch(
@@ -640,8 +677,22 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         log: JournalLog,
         dateKey: String,
         calendarId: Long? = null,
+        timeMinutes: Int? = null,
     ) {
-        val draft = PendingEventDraft(text, priority, log, dateKey, calendarId = calendarId)
+        val draft = PendingEventDraft(
+            text = text,
+            priority = priority,
+            log = log,
+            dateKey = dateKey,
+            calendarId = calendarId,
+            timeMinutes = timeMinutes,
+        )
+        if (log == JournalLog.UNSCHEDULED) {
+            // No date yet — keep local only; Index → Unscheduled.
+            ensureLocalEventEntry(draft)
+            refreshJournal()
+            return
+        }
         if (!CalendarSyncHelper.hasCalendarPermissions(requireContext())) {
             pendingEventDraft = draft
             calendarPermissionLauncher.launch(
@@ -692,10 +743,32 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun ensureLocalEventEntry(draft: PendingEventDraft): JournalEntry {
         val existingId = draft.existingId
         if (existingId != null) {
-            return journalStore.update(existingId, draft.text, BulletType.EVENT, draft.priority)
-                ?: journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+            return journalStore.update(
+                id = existingId,
+                text = draft.text,
+                type = BulletType.EVENT,
+                priority = draft.priority,
+                log = draft.log,
+                dateKey = draft.dateKey,
+                timeMinutes = draft.timeMinutes,
+                clearTime = draft.timeMinutes == null,
+            ) ?: journalStore.add(
+                text = draft.text,
+                type = BulletType.EVENT,
+                log = draft.log,
+                dateKey = draft.dateKey,
+                priority = draft.priority,
+                timeMinutes = draft.timeMinutes,
+            )
         }
-        return journalStore.add(draft.text, BulletType.EVENT, draft.log, draft.dateKey, draft.priority)
+        return journalStore.add(
+            text = draft.text,
+            type = BulletType.EVENT,
+            log = draft.log,
+            dateKey = draft.dateKey,
+            priority = draft.priority,
+            timeMinutes = draft.timeMinutes,
+        )
     }
 
     private fun saveEventToJournalAndCalendar(draft: PendingEventDraft, calendarId: Long) {

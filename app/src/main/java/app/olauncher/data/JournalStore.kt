@@ -178,6 +178,7 @@ class JournalStore(context: Context) {
         calendarId: Long? = null,
         fromCalendar: Boolean = false,
         tags: List<String> = emptyList(),
+        timeMinutes: Int? = null,
     ): JournalEntry {
         val entry = JournalEntry(
             id = UUID.randomUUID().toString(),
@@ -190,6 +191,7 @@ class JournalStore(context: Context) {
             calendarId = calendarId,
             fromCalendar = fromCalendar,
             tags = if (type == BulletType.TASK) sanitizeTags(tags) else emptyList(),
+            timeMinutes = if (type == BulletType.EVENT) timeMinutes else null,
         )
         val updated = getAll().toMutableList().apply { add(entry) }
         saveAll(updated)
@@ -214,6 +216,10 @@ class JournalStore(context: Context) {
         type: BulletType,
         priority: Boolean,
         tags: List<String> = emptyList(),
+        log: JournalLog? = null,
+        dateKey: String? = null,
+        timeMinutes: Int? = null,
+        clearTime: Boolean = false,
     ): JournalEntry? {
         val all = getAll().toMutableList()
         val index = all.indexOfFirst { it.id == id }
@@ -226,6 +232,14 @@ class JournalStore(context: Context) {
             // Completing only applies to tasks; clear when changing away.
             completed = if (type == BulletType.TASK) current.completed else false,
             tags = if (type == BulletType.TASK) sanitizeTags(tags) else emptyList(),
+            log = log ?: current.log,
+            dateKey = dateKey ?: current.dateKey,
+            timeMinutes = when {
+                type != BulletType.EVENT -> null
+                clearTime -> null
+                timeMinutes != null -> timeMinutes
+                else -> current.timeMinutes
+            },
         )
         all[index] = updated
         saveAll(all)
@@ -329,6 +343,9 @@ class JournalStore(context: Context) {
             if (entry.tags.isNotEmpty()) {
                 put("tags", JSONArray(entry.tags))
             }
+            if (entry.timeMinutes != null) {
+                put("timeMinutes", entry.timeMinutes)
+            }
         }
 
     private fun parseEntry(obj: JSONObject): JournalEntry? {
@@ -348,6 +365,7 @@ class JournalStore(context: Context) {
                     .takeIf { it > 0L },
                 fromCalendar = obj.optBoolean("fromCalendar", false),
                 tags = parseTags(obj.optJSONArray("tags")),
+                timeMinutes = obj.optInt("timeMinutes", -1).takeIf { it in 0..1439 },
             )
         } catch (_: Exception) {
             null

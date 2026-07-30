@@ -193,6 +193,7 @@ class ScreenshotDemoTest {
         root.findViewById<View>(R.id.tagsSection).visibility = View.VISIBLE
         root.findViewById<View>(R.id.calendarSection).visibility = View.GONE
         root.findViewById<EditText>(R.id.entryInput).setText("Morning pages")
+        root.findViewById<TextView>(R.id.scheduleValue).setText(R.string.schedule_unscheduled)
         val tags = root.findViewById<android.widget.LinearLayout>(R.id.tagChipGroup)
         listOf("#Personal", "#Work").forEachIndexed { index, label ->
             tags.addView(

@@ -151,7 +151,7 @@ object CalendarSyncHelper {
         if (!hasCalendarPermissions(context)) return null
         if (calendarId <= 0L) return null
 
-        val (startMillis, endMillis) = eventBoundsUtc(entry) ?: return null
+        val (startMillis, endMillis, allDay) = eventBounds(entry) ?: return null
 
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
@@ -159,8 +159,11 @@ object CalendarSyncHelper {
             put(CalendarContract.Events.DESCRIPTION, EVENT_DESCRIPTION)
             put(CalendarContract.Events.DTSTART, startMillis)
             put(CalendarContract.Events.DTEND, endMillis)
-            put(CalendarContract.Events.ALL_DAY, 1)
-            put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getTimeZone("UTC").id)
+            put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+            put(
+                CalendarContract.Events.EVENT_TIMEZONE,
+                if (allDay) TimeZone.getTimeZone("UTC").id else TimeZone.getDefault().id,
+            )
             put(CalendarContract.Events.STATUS, CalendarContract.Events.STATUS_CONFIRMED)
             put(CalendarContract.Events.HAS_ALARM, 0)
             put(CalendarContract.Events.CUSTOM_APP_PACKAGE, context.packageName)
@@ -495,6 +498,34 @@ object CalendarSyncHelper {
         } catch (_: Exception) {
             false
         }
+    }
+
+    /**
+     * Event bounds for calendar insert.
+     * Timed events use local timezone hour/minute; all-day use UTC midnight.
+     * Returns Triple(start, end, allDay).
+     */
+    private fun eventBounds(entry: JournalEntry): Triple<Long, Long, Boolean>? {
+        val timeMinutes = entry.timeMinutes
+        if (timeMinutes != null && entry.log != JournalLog.FUTURE && entry.log != JournalLog.UNSCHEDULED) {
+            return try {
+                val parsed = dayFormat.parse(entry.dateKey) ?: return null
+                val local = Calendar.getInstance().apply {
+                    time = parsed
+                    set(Calendar.HOUR_OF_DAY, timeMinutes / 60)
+                    set(Calendar.MINUTE, timeMinutes % 60)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val start = local.timeInMillis
+                local.add(Calendar.HOUR_OF_DAY, 1)
+                Triple(start, local.timeInMillis, false)
+            } catch (e: Exception) {
+                Log.e(TAG, "Bad timed dateKey ${entry.dateKey}", e)
+                null
+            }
+        }
+        return eventBoundsUtc(entry)?.let { (start, end) -> Triple(start, end, true) }
     }
 
     /**
