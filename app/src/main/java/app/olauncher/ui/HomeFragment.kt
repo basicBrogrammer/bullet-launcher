@@ -361,7 +361,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
             },
             onEmptySwipeDown = { swipeDownAction() },
-            onEntryMoved = { entry -> syncMovedCalendarEvent(entry) },
         )
         journalPagerAdapter = adapter
         binding.journalPager.adapter = adapter
@@ -805,14 +804,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             journalStore.toggleCompleted(entry.id)
             refreshJournal()
         }
-    }
-
-    private fun syncMovedCalendarEvent(entry: JournalEntry) {
-        if (entry.type != BulletType.EVENT) return
-        if (entry.calendarEventId == null) return
-        // Avoid rewriting a whole recurring series from an instance drag.
-        if (entry.fromCalendar) return
-        CalendarSyncHelper.updateEvent(requireContext(), entry)
     }
 
     private fun deleteJournalEntry(entry: JournalEntry) {
