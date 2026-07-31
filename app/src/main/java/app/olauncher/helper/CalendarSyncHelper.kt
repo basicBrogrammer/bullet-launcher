@@ -12,6 +12,7 @@ import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
 import app.olauncher.data.JournalLog
 import app.olauncher.data.JournalStore
+import app.olauncher.data.JournalTimeFormat
 import app.olauncher.data.Prefs
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -155,7 +156,7 @@ object CalendarSyncHelper {
 
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
-            put(CalendarContract.Events.TITLE, entry.text)
+            put(CalendarContract.Events.TITLE, JournalTimeFormat.splitEmbeddedTime(entry.text).first)
             put(CalendarContract.Events.DESCRIPTION, EVENT_DESCRIPTION)
             put(CalendarContract.Events.DTSTART, startMillis)
             put(CalendarContract.Events.DTEND, endMillis)
@@ -184,7 +185,7 @@ object CalendarSyncHelper {
     }
 
     /**
-     * Updates the title of a previously synced calendar event.
+     * Updates a previously synced calendar event's title and schedule bounds.
      * Returns true if the row was updated.
      */
     fun updateEvent(context: Context, entry: JournalEntry): Boolean {
@@ -193,8 +194,18 @@ object CalendarSyncHelper {
         if (entry.type != BulletType.EVENT) return false
         if (!hasCalendarPermissions(context)) return false
 
+        val title = JournalTimeFormat.splitEmbeddedTime(entry.text).first
         val values = ContentValues().apply {
-            put(CalendarContract.Events.TITLE, entry.text)
+            put(CalendarContract.Events.TITLE, title)
+            eventBounds(entry)?.let { (start, end, allDay) ->
+                put(CalendarContract.Events.DTSTART, start)
+                put(CalendarContract.Events.DTEND, end)
+                put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+                put(
+                    CalendarContract.Events.EVENT_TIMEZONE,
+                    if (allDay) TimeZone.getTimeZone("UTC").id else TimeZone.getDefault().id,
+                )
+            }
         }
         return try {
             val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, calendarEventId)
@@ -289,7 +300,7 @@ object CalendarSyncHelper {
             val dateKey = dayKeyForEvent(remote.beginMillis, remote.allDay)
             val key = syncKey(remote.eventId, dateKey)
 
-            val text = formatEventText(title, remote.beginMillis, remote.allDay)
+            val timeMinutes = eventTimeMinutes(remote.beginMillis, remote.allDay)
             val monthKey = dateKey.take(7)
             val (log, storeKey) = when {
                 monthKey > currentMonth -> JournalLog.FUTURE to monthKey
@@ -314,13 +325,25 @@ object CalendarSyncHelper {
             if (existing != null) {
                 seenEntryIds.add(existing.id)
                 seenKeys.add(syncKey(remote.eventId, existing.dateKey))
-                if (existing.text != text || existing.dateKey != storeKey || existing.log != log) {
-                    store.updateSyncedEvent(existing.id, text, log, storeKey, remote.calendarId)
+                val needsUpdate = existing.text != title ||
+                    existing.dateKey != storeKey ||
+                    existing.log != log ||
+                    existing.timeMinutes != timeMinutes
+                if (needsUpdate) {
+                    store.updateSyncedEvent(
+                        id = existing.id,
+                        text = title,
+                        log = log,
+                        dateKey = storeKey,
+                        calendarId = remote.calendarId,
+                        timeMinutes = timeMinutes,
+                        clearTime = timeMinutes == null,
+                    )
                     changed = true
                 }
             } else {
                 store.add(
-                    text = text,
+                    text = title,
                     type = BulletType.EVENT,
                     log = log,
                     dateKey = storeKey,
@@ -328,9 +351,10 @@ object CalendarSyncHelper {
                     calendarEventId = remote.eventId,
                     calendarId = remote.calendarId,
                     fromCalendar = true,
+                    timeMinutes = timeMinutes,
                 )
                 changed = true
-                Log.d(TAG, "Imported calendar event ${remote.eventId} → $storeKey ($text)")
+                Log.d(TAG, "Imported calendar event ${remote.eventId} → $storeKey ($title)")
             }
         }
 
@@ -486,6 +510,16 @@ object CalendarSyncHelper {
             "$title · ${timeFormat.format(Date(beginMillis))}"
         } catch (_: Exception) {
             title
+        }
+    }
+
+    private fun eventTimeMinutes(beginMillis: Long, allDay: Boolean): Int? {
+        if (allDay) return null
+        return try {
+            val cal = Calendar.getInstance().apply { timeInMillis = beginMillis }
+            cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+        } catch (_: Exception) {
+            null
         }
     }
 

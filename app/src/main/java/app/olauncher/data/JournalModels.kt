@@ -59,14 +59,21 @@ data class JournalEntry(
         else -> type.symbol
     }
 
-    /** Title with optional time suffix for list rows. */
-    fun displayText(): String {
-        val minutes = timeMinutes ?: return text
-        // Imported events may already include " · HH:mm" in [text].
-        if (type == BulletType.EVENT && text.contains(" · ")) return text
-        val hour = minutes / 60
-        val minute = minutes % 60
-        return String.format(java.util.Locale.getDefault(), "%s · %02d:%02d", text, hour, minute)
+    /**
+     * Title with optional time suffix for list rows.
+     * @param militaryTime true → 24-hour (e.g. 15:30); false → 12-hour (e.g. 3:30 PM)
+     */
+    fun displayText(militaryTime: Boolean = true): String {
+        val storedMinutes = timeMinutes
+        val (title, minutes) = if (storedMinutes != null) {
+            // Prefer stored minutes; strip a legacy embedded suffix if present.
+            val clean = JournalTimeFormat.splitEmbeddedTime(text).first
+            clean to storedMinutes
+        } else {
+            JournalTimeFormat.splitEmbeddedTime(text)
+        }
+        val resolved = minutes ?: return title
+        return "$title · ${JournalTimeFormat.format(resolved, militaryTime)}"
     }
 }
 

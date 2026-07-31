@@ -85,51 +85,49 @@ class ScreenshotDemoTest {
         // Earlier days fill the viewport so scrolling to today (30) is visible —
         // matches the default "scroll to today" landing position.
         val dayLabel = java.text.SimpleDateFormat("d · EEE", java.util.Locale.US)
-        val earlier = (1..25).map { day ->
+        fun dayItems(day: Int, entries: List<JournalEntry>): List<JournalListItem> {
             val cal = java.util.Calendar.getInstance().apply {
                 set(2026, java.util.Calendar.JULY, day)
             }
-            JournalListItem.Section(
-                dayLabel.format(cal.time),
+            val key = "2026-07-${day.toString().padStart(2, '0')}"
+            return listOf(JournalListItem.DayHeader(dayLabel.format(cal.time), key)) +
+                entries.map { JournalListItem.Bullet(it) }
+        }
+        val items = (1..25).flatMap { day ->
+            dayItems(
+                day,
                 listOf(demoEntry("Day $day note", BulletType.NOTE, day = "2026-07-${day.toString().padStart(2, '0')}")),
             )
-        }
-        val sections = earlier + listOf(
-            JournalListItem.Section(
-                "26 · Sun",
-                listOf(
-                    demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
-                    demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26"),
-                )
+        } + dayItems(
+            26,
+            listOf(
+                demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-26"),
+                demoEntry("Team standup", BulletType.EVENT, day = "2026-07-26", timeMinutes = 10 * 60),
             ),
-            JournalListItem.Section(
-                "27 · Mon",
-                listOf(
-                    demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
-                    demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27"),
-                )
+        ) + dayItems(
+            27,
+            listOf(
+                demoEntry("Ship journal home", BulletType.TASK, day = "2026-07-27"),
+                demoEntry("Dentist", BulletType.EVENT, day = "2026-07-27", timeMinutes = 15 * 60 + 30),
             ),
-            JournalListItem.Section(
-                "28 · Tue",
-                listOf(demoEntry("Write weekly review", BulletType.TASK, day = "2026-07-28"))
+        ) + dayItems(
+            28,
+            listOf(demoEntry("Write weekly review", BulletType.TASK, day = "2026-07-28")),
+        ) + dayItems(
+            29,
+            listOf(
+                demoEntry("Grocery run", BulletType.TASK, day = "2026-07-29"),
+                demoEntry("Idea: denser monthly log", BulletType.NOTE, day = "2026-07-29"),
             ),
-            JournalListItem.Section(
-                "29 · Wed",
-                listOf(
-                    demoEntry("Grocery run", BulletType.TASK, day = "2026-07-29"),
-                    demoEntry("Idea: denser monthly log", BulletType.NOTE, day = "2026-07-29"),
-                )
-            ),
-            JournalListItem.Section(
-                "30 · Thu",
-                listOf(
-                    demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-30"),
-                    demoEntry("Team standup · 10:00", BulletType.EVENT, day = "2026-07-30"),
-                    demoEntry("Pin monthly log to today", BulletType.TASK, day = "2026-07-30"),
-                )
+        ) + dayItems(
+            30,
+            listOf(
+                demoEntry("Morning pages", BulletType.TASK, priority = true, day = "2026-07-30"),
+                demoEntry("Team standup", BulletType.EVENT, day = "2026-07-30", timeMinutes = 10 * 60),
+                demoEntry("Pin monthly log to today", BulletType.TASK, day = "2026-07-30"),
             ),
         )
-        adapter.submit(sections)
+        adapter.submit(items)
         root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
         // Harness measures after populate; size the list, add bottom pad so the
         // last (today) section can sit at the top — same trick as production.
@@ -144,9 +142,41 @@ class ScreenshotDemoTest {
         layoutRoot()
         val bottomPad = (recycler.height - recycler.paddingTop).coerceAtLeast(recycler.paddingBottom)
         recycler.setPadding(recycler.paddingLeft, recycler.paddingTop, recycler.paddingRight, bottomPad)
+        val todayHeaderIndex = items.indexOfLast { it is JournalListItem.DayHeader }
         (recycler.layoutManager as LinearLayoutManager)
-            .scrollToPositionWithOffset(sections.lastIndex, 0)
+            .scrollToPositionWithOffset(todayHeaderIndex, 0)
         layoutRoot()
+    }
+
+    @Test
+    fun dailyLogTwelveHour() = capture("01b_daily_log_12h", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).setText(R.string.daily_log)
+        root.findViewById<TextView>(R.id.logSubtitle).text = "Mon, 27 Jul"
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {}).also { it.militaryTime = false }
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                demoEntry("Morning pages", BulletType.TASK, priority = true, tags = listOf("Personal")),
+                demoEntry("Team standup", BulletType.EVENT, timeMinutes = 10 * 60),
+                demoEntry("Dentist", BulletType.EVENT, timeMinutes = 15 * 60 + 30),
+                demoEntry("Review monthly goals", BulletType.TASK, tags = listOf("Work")),
+            ).map { JournalListItem.Bullet(it) }
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
+    }
+
+    @Test
+    fun settingsTimeFormat() = capture("09_settings_time_format", R.layout.fragment_settings) { _, root ->
+        root.findViewById<TextView>(R.id.syncCalendars).text = "All calendars"
+        root.findViewById<TextView>(R.id.homeScrim).setText(R.string.off)
+        root.findViewById<TextView>(R.id.dateTime).setText(R.string.on)
+        root.findViewById<TextView>(R.id.journalTimeFormat).setText(R.string.time_format_12h)
+        root.findViewById<TextView>(R.id.dailyWallpaper).setText(R.string.off)
+        root.findViewById<TextView>(R.id.statusBar)?.setText(R.string.off)
+        // Open the picker overlay so both 24-hour / 12-hour choices are visible.
+        root.findViewById<View>(R.id.journalTimeFormatSelectLayout).visibility = View.VISIBLE
     }
 
     @Test
@@ -448,6 +478,7 @@ class ScreenshotDemoTest {
         root.findViewById<TextView>(R.id.syncCalendars).text = "2 selected"
         root.findViewById<TextView>(R.id.homeScrim).setText(R.string.on)
         root.findViewById<TextView>(R.id.dateTime).setText(R.string.on)
+        root.findViewById<TextView>(R.id.journalTimeFormat).setText(R.string.time_format_24h)
         root.findViewById<TextView>(R.id.dailyWallpaper).setText(R.string.off)
     }
 

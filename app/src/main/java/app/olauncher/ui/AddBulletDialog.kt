@@ -32,6 +32,7 @@ import app.olauncher.data.BulletType
 import app.olauncher.data.JournalEntry
 import app.olauncher.data.JournalLog
 import app.olauncher.data.JournalStore
+import app.olauncher.data.Prefs
 import app.olauncher.helper.CalendarSyncHelper
 import app.olauncher.helper.getColorFromAttr
 import java.text.SimpleDateFormat
@@ -193,7 +194,9 @@ object AddBulletDialog {
         val editing = existing != null
         val dayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val displayFormat = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
-        val timeDisplayFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+        val militaryTime = Prefs(context).journalMilitaryTime
+        val timeDisplayPattern = if (militaryTime) "HH:mm" else "h:mm a"
+        val timeDisplayFormat = SimpleDateFormat(timeDisplayPattern, Locale.getDefault())
 
         // null schedule = Unscheduled (Index). Picker still opens on "today".
         var scheduledDate: Calendar? = existing?.let { entry ->
@@ -253,7 +256,7 @@ object AddBulletDialog {
                 },
                 hour,
                 minute,
-                false,
+                militaryTime,
             ).apply {
                 // Replace Cancel so choosing no time is an explicit "all day".
                 setButton(
