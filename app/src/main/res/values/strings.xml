@@ -241,6 +241,10 @@
     <string name="expand_apps_sheet">Show more apps</string>
     <string name="collapse_apps_sheet">Show fewer apps</string>
     <string name="show_clock">Show clock</string>
+    <string name="journal_time_format">Bullet time format</string>
+    <string name="time_format_24h">24-hour</string>
+    <string name="time_format_12h">12-hour</string>
+    <string name="drag_bullet">Drag to move</string>
     <string name="weather_location_permission">Allow location access to show weather</string>
     <string name="sync_calendars">Calendars to sync</string>
     <string name="sync_calendars_subtitle">Choose which calendars appear as Event bullets. Other calendars stay in your Calendar app only.</string>

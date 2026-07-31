@@ -90,6 +90,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         populateTextSize()
         populateStatusBar()
         populateDateTime()
+        populateJournalTimeFormat()
         populateHomeScrim()
         populateSyncCalendars()
         populateSwipeApps()
@@ -100,6 +101,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
 
     override fun onClick(view: View) {
         binding.dateTimeSelectLayout.visibility = View.GONE
+        binding.journalTimeFormatSelectLayout.visibility = View.GONE
         binding.appThemeSelectLayout.visibility = View.GONE
         binding.swipeDownSelectLayout.visibility = View.GONE
         if (view.id != R.id.textSizeMinus && view.id != R.id.textSizePlus) {
@@ -124,6 +126,9 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             R.id.dateTime -> binding.dateTimeSelectLayout.visibility = View.VISIBLE
             R.id.dateTimeOn -> toggleDateTime(Constants.DateTime.ON)
             R.id.dateTimeOff -> toggleDateTime(Constants.DateTime.OFF)
+            R.id.journalTimeFormat -> binding.journalTimeFormatSelectLayout.visibility = View.VISIBLE
+            R.id.journalTimeMilitary -> toggleJournalTimeFormat(military = true)
+            R.id.journalTime12Hour -> toggleJournalTimeFormat(military = false)
             R.id.appThemeText -> binding.appThemeSelectLayout.visibility = View.VISIBLE
             R.id.iconPackText -> showIconPackPicker()
             R.id.themeLight -> updateTheme(AppCompatDelegate.MODE_NIGHT_NO)
@@ -174,6 +179,9 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         binding.dateTime.setOnClickListener(this)
         binding.dateTimeOn.setOnClickListener(this)
         binding.dateTimeOff.setOnClickListener(this)
+        binding.journalTimeFormat.setOnClickListener(this)
+        binding.journalTimeMilitary.setOnClickListener(this)
+        binding.journalTime12Hour.setOnClickListener(this)
         binding.swipeLeftApp.setOnClickListener(this)
         binding.swipeRightApp.setOnClickListener(this)
         binding.swipeDownAction.setOnClickListener(this)
@@ -259,6 +267,17 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
     private fun populateDateTime() {
         binding.dateTime.text = getString(
             if (prefs.dateTimeVisibility == Constants.DateTime.OFF) R.string.off else R.string.on
+        )
+    }
+
+    private fun toggleJournalTimeFormat(military: Boolean) {
+        prefs.journalMilitaryTime = military
+        populateJournalTimeFormat()
+    }
+
+    private fun populateJournalTimeFormat() {
+        binding.journalTimeFormat.text = getString(
+            if (prefs.journalMilitaryTime) R.string.time_format_24h else R.string.time_format_12h
         )
     }
 

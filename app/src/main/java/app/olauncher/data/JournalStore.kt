@@ -103,7 +103,7 @@ class JournalStore(context: Context) {
     fun getForDay(dateKey: String): List<JournalEntry> =
         getAll()
             .filter { it.log == JournalLog.DAILY && it.dateKey == dateKey }
-            .sortedWith(compareByDescending<JournalEntry> { it.priority }.thenBy { it.createdAt })
+            .sortedWith(dayEntryComparator)
 
     fun getForMonth(monthKey: String): List<JournalEntry> =
         getAll()
@@ -113,6 +113,7 @@ class JournalStore(context: Context) {
             }
             .sortedWith(
                 compareBy<JournalEntry> { it.dateKey }
+                    .thenBy { it.timeMinutes ?: Int.MAX_VALUE }
                     .thenByDescending { it.priority }
                     .thenBy { it.createdAt }
             )
@@ -120,7 +121,7 @@ class JournalStore(context: Context) {
     fun getForFutureMonth(monthKey: String): List<JournalEntry> =
         getAll()
             .filter { it.log == JournalLog.FUTURE && it.dateKey == monthKey }
-            .sortedWith(compareByDescending<JournalEntry> { it.priority }.thenBy { it.createdAt })
+            .sortedWith(dayEntryComparator)
 
     fun getFutureEntries(): List<JournalEntry> =
         getAll()
@@ -245,6 +246,37 @@ class JournalStore(context: Context) {
         return updated
     }
 
+    /**
+     * Moves an entry to another day in the monthly log, optionally adjusting time / order.
+     * Entries become [JournalLog.DAILY] with a yyyy-MM-dd [dateKey].
+     */
+    fun moveToDay(
+        id: String,
+        dateKey: String,
+        timeMinutes: Int?,
+        createdAt: Long,
+    ): JournalEntry? {
+        val all = getAll().toMutableList()
+        val index = all.indexOfFirst { it.id == id }
+        if (index < 0) return null
+        val current = all[index]
+        val updated = current.copy(
+            dateKey = dateKey,
+            log = JournalLog.DAILY,
+            timeMinutes = timeMinutes?.takeIf { it in 0..1439 },
+            createdAt = createdAt,
+            // Keep title clean when time lives in timeMinutes (strip legacy embed).
+            text = if (current.timeMinutes != null || timeMinutes != null) {
+                JournalTimeFormat.splitEmbeddedTime(current.text).first
+            } else {
+                current.text
+            },
+        )
+        all[index] = updated
+        saveAll(all)
+        return updated
+    }
+
     fun delete(id: String) {
         saveAll(getAll().filterNot { it.id == id })
     }
@@ -274,15 +306,23 @@ class JournalStore(context: Context) {
         log: JournalLog,
         dateKey: String,
         calendarId: Long?,
+        timeMinutes: Int? = null,
+        clearTime: Boolean = false,
     ): JournalEntry? {
         val all = getAll().toMutableList()
         val index = all.indexOfFirst { it.id == id }
         if (index < 0) return null
-        val updated = all[index].copy(
+        val current = all[index]
+        val updated = current.copy(
             text = text,
             log = log,
             dateKey = dateKey,
-            calendarId = calendarId ?: all[index].calendarId,
+            calendarId = calendarId ?: current.calendarId,
+            timeMinutes = when {
+                clearTime -> null
+                timeMinutes != null -> timeMinutes.takeIf { it in 0..1439 }
+                else -> current.timeMinutes
+            },
         )
         all[index] = updated
         saveAll(all)
@@ -479,6 +519,11 @@ class JournalStore(context: Context) {
         private const val PREFS_NAME = "app.olauncher.journal"
         private const val KEY_ENTRIES = "ENTRIES_JSON"
         private const val KEY_SEEDED = "SEEDED_SAMPLE"
+
+        private val dayEntryComparator =
+            compareBy<JournalEntry> { it.timeMinutes ?: Int.MAX_VALUE }
+                .thenByDescending { it.priority }
+                .thenBy { it.createdAt }
 
         fun normalizeTag(raw: String?): String? {
             val trimmed = raw?.trim().orEmpty()

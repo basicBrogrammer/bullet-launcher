@@ -351,6 +351,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun initJournalPager() {
         val adapter = JournalPagerAdapter(
             store = journalStore,
+            prefs = prefs,
             onIndex = { showIndexDialog() },
             onToggle = { entry -> toggleJournalEntry(entry) },
             onLongPress = { entry -> showEditBulletDialog(entry) },
@@ -360,6 +361,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
             },
             onEmptySwipeDown = { swipeDownAction() },
+            onEntryMoved = { entry -> syncMovedCalendarEvent(entry) },
         )
         journalPagerAdapter = adapter
         binding.journalPager.adapter = adapter
@@ -417,7 +419,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             val adapter = JournalBulletAdapter(
                 onToggle = { entry -> toggleJournalEntry(entry) },
                 onLongPress = { entry -> showEditBulletDialog(entry) },
-            )
+            ).also { it.militaryTime = prefs.journalMilitaryTime }
             collectionBulletAdapter = adapter
             bulletList.layoutManager = LinearLayoutManager(requireContext())
             bulletList.adapter = adapter
@@ -491,6 +493,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             }
         }
         emptyHint.isVisible = entries.isEmpty()
+        collectionBulletAdapter?.militaryTime = prefs.journalMilitaryTime
         collectionBulletAdapter?.submit(entries.map { JournalListItem.Bullet(it) })
         // Tag with no remaining tasks — leave the page but Index will hide it next open.
         if (destination is IndexDestination.Tag && entries.isEmpty()) {
@@ -802,6 +805,14 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             journalStore.toggleCompleted(entry.id)
             refreshJournal()
         }
+    }
+
+    private fun syncMovedCalendarEvent(entry: JournalEntry) {
+        if (entry.type != BulletType.EVENT) return
+        if (entry.calendarEventId == null) return
+        // Avoid rewriting a whole recurring series from an instance drag.
+        if (entry.fromCalendar) return
+        CalendarSyncHelper.updateEvent(requireContext(), entry)
     }
 
     private fun deleteJournalEntry(entry: JournalEntry) {
