@@ -137,6 +137,37 @@ class JournalStore(context: Context) {
             .filter { it.log == JournalLog.UNSCHEDULED }
             .sortedWith(compareByDescending<JournalEntry> { it.priority }.thenBy { it.createdAt })
 
+    /**
+     * Incomplete tasks whose schedule is before today.
+     * Day-keyed logs (Daily / Monthly) use yyyy-MM-dd; Future uses yyyy-MM.
+     * Unscheduled entries are excluded — they have no due date.
+     */
+    fun getOverdue(): List<JournalEntry> {
+        val today = todayKey()
+        val month = currentMonthKey()
+        return getAll()
+            .filter { entry ->
+                entry.type == BulletType.TASK &&
+                    !entry.completed &&
+                    isOverdue(entry, today, month)
+            }
+            .sortedWith(
+                compareBy<JournalEntry> { it.dateKey }
+                    .thenByDescending { it.priority }
+                    .thenBy { it.createdAt }
+            )
+    }
+
+    private fun isOverdue(entry: JournalEntry, today: String, currentMonth: String): Boolean {
+        val key = entry.dateKey
+        if (key.isBlank() || entry.log == JournalLog.UNSCHEDULED) return false
+        return when (entry.log) {
+            JournalLog.DAILY, JournalLog.MONTHLY -> key < today
+            JournalLog.FUTURE -> key.length >= 7 && key.substring(0, 7) < currentMonth
+            JournalLog.UNSCHEDULED -> false
+        }
+    }
+
     fun getForTag(tag: String): List<JournalEntry> {
         val needle = normalizeTag(tag) ?: return emptyList()
         return getAll()
@@ -383,7 +414,7 @@ class JournalStore(context: Context) {
             tags = listOf("Personal"),
         )
         add(
-            "Tip: open Index for Unscheduled and tags",
+            "Tip: open Index for Overdue, Unscheduled, and tags",
             BulletType.NOTE,
             JournalLog.UNSCHEDULED,
             JournalPages.UNSCHEDULED_KEY,

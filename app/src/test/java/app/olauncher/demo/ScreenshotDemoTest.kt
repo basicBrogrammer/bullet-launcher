@@ -214,9 +214,10 @@ class ScreenshotDemoTest {
     fun index() = capture("04_index", R.layout.dialog_index) { activity, root ->
         val list = root.findViewById<android.widget.LinearLayout>(R.id.indexList)
         listOf(
+            activity.getString(R.string.index_overdue_row),
             activity.getString(R.string.index_unscheduled_row),
-            activity.getString(R.string.index_tag_row, 2, "Personal"),
-            activity.getString(R.string.index_tag_row, 3, "Work"),
+            activity.getString(R.string.index_tag_row, 3, "Personal"),
+            activity.getString(R.string.index_tag_row, 4, "Work"),
         ).forEach { label ->
             val row = TextView(activity).apply {
                 setTextAppearance(activity, R.style.TextMedium)
@@ -226,6 +227,23 @@ class ScreenshotDemoTest {
             list.addView(row)
         }
         root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
+    fun overdue() = capture("04a_overdue", R.layout.page_journal_log) { _, root ->
+        root.findViewById<TextView>(R.id.logTitle).setText(R.string.overdue_log)
+        root.findViewById<TextView>(R.id.logSubtitle).setText(R.string.overdue_log_subtitle)
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        recycler.layoutManager = LinearLayoutManager(root.context)
+        val adapter = JournalBulletAdapter({}, {})
+        recycler.adapter = adapter
+        adapter.submit(
+            listOf(
+                demoEntry("Grocery run", BulletType.TASK, log = JournalLog.MONTHLY, day = "2026-07-30", tags = listOf("Personal")),
+                demoEntry("Call landlord", BulletType.TASK, priority = true, log = JournalLog.DAILY, day = "2026-07-29", tags = listOf("Personal")),
+            ).map { JournalListItem.Bullet(it) }
+        )
+        root.findViewById<View>(R.id.emptyHint).visibility = View.GONE
     }
 
     @Test
