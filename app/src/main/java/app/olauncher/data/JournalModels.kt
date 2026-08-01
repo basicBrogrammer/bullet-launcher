@@ -79,6 +79,8 @@ data class JournalEntry(
 
 /** Destinations listed by the Index (collections). */
 sealed class IndexDestination {
+    /** Incomplete tasks scheduled before today. */
+    data object Overdue : IndexDestination()
     data object Unscheduled : IndexDestination()
     data class Tag(val name: String) : IndexDestination()
 }

@@ -478,6 +478,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val subtitle = page.findViewById<TextView>(R.id.logSubtitle)
         val emptyHint = page.findViewById<TextView>(R.id.emptyHint)
         val entries = when (destination) {
+            is IndexDestination.Overdue -> {
+                title.setText(R.string.overdue_log)
+                subtitle.setText(R.string.overdue_log_subtitle)
+                emptyHint.setText(R.string.journal_overdue_empty)
+                journalStore.getOverdue()
+            }
             is IndexDestination.Unscheduled -> {
                 title.setText(R.string.unscheduled_log)
                 subtitle.setText(R.string.unscheduled_log_subtitle)

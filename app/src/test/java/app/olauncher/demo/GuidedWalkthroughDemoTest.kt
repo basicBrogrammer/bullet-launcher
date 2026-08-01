@@ -225,13 +225,14 @@ class GuidedWalkthroughDemoTest {
         "07_index",
         R.layout.dialog_index,
         "7 · Index",
-        "Collections: Unscheduled inbox plus tags like Personal and Work",
+        "Collections: Overdue, Unscheduled inbox, plus tags like Personal and Work",
     ) { activity, root ->
         val list = root.findViewById<android.widget.LinearLayout>(R.id.indexList)
         listOf(
+            activity.getString(R.string.index_overdue_row),
             activity.getString(R.string.index_unscheduled_row),
-            activity.getString(R.string.index_tag_row, 2, "Personal"),
-            activity.getString(R.string.index_tag_row, 3, "Work"),
+            activity.getString(R.string.index_tag_row, 3, "Personal"),
+            activity.getString(R.string.index_tag_row, 4, "Work"),
         ).forEach { label ->
             list.addView(
                 TextView(activity).apply {

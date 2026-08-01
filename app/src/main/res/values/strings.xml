@@ -193,12 +193,14 @@
     <string name="future_log">Future Log</string>
     <string name="future_log_subtitle">Looking ahead</string>
     <string name="unscheduled_log">Unscheduled</string>
+    <string name="overdue_log">Overdue</string>
     <string name="schedule_label">When</string>
     <string name="schedule_unscheduled">Unscheduled</string>
     <string name="schedule_clear">Clear</string>
     <string name="schedule_pick_time">Add time</string>
     <string name="schedule_all_day">All day</string>
     <string name="unscheduled_log_subtitle">Entries without a date</string>
+    <string name="overdue_log_subtitle">Incomplete tasks past their date</string>
     <string name="tag_log_subtitle">Tagged tasks</string>
     <string name="add_entry">New entry</string>
     <string name="edit_entry">Edit entry</string>
@@ -215,8 +217,10 @@
     <string name="new_tag_hint">New tag</string>
     <string name="add_tag">Add</string>
     <string name="tags_empty_hint">No tags yet — add one below</string>
-    <string name="index_unscheduled_row">01    Unscheduled</string>
+    <string name="index_overdue_row">01    Overdue</string>
+    <string name="index_unscheduled_row">02    Unscheduled</string>
     <string name="index_tag_row">%1$02d    %2$s</string>
+    <string name="journal_overdue_empty">No overdue tasks</string>
     <string name="journal_unscheduled_empty">No unscheduled tasks</string>
     <string name="journal_tag_empty">No tasks with this tag</string>
     <string name="back_to_daily">Daily</string>
