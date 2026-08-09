@@ -1,1 +1,34 @@
-<p><b>Are you using your phone, or is your phone using you?</b></b><p><i>Olauncher</i> is a minimal AF Android launcher with just enough features. By the way, AF stands for AdFree. :D</p><p><br><b>FEATURES YOU MIGHT LIKE:</b></p><ul><li><b>Minimalist homescreen:</b> A clean homescreen experience with no icons, ads or any distraction. It helps you reduce your screen time and increase productivity.</li><li><b>Customizations:</b> Resize text, rename apps, hide unused apps, show or hide the status bar, app text alignments, etc.</li><li><b>Gestures:</b> Double tap to lock screen. Swipe left or right to open apps. Swipe down for notifications.</li><li><b>Wallpaper:</b> A beautiful new wallpaper, daily. No one said that a minimalist launcher has to be boring. :)</li><li><b>Privacy:</b> No data collection. FOSS Android launcher. Open source under GPLv3 license.</li><li><b>Launcher features:</b> Dark &amp; light themes, dual apps support, work profile support, auto app launch.</li></ul><p>To maintain the simplicity of such a minimalist launcher, a few niche features are available but hidden. Please visit the <b>About</b> page in settings for the complete list.</p><p><b>FAQs:</b></p><ul><li><b>1. Hidden apps</b> - Long press anywhere on the home screen to open settings. Tap ’Olauncher’ on the top to see your hidden apps.</li><li><b>2. Navigation gestures</b> - Some devices do not support gestures with a downloaded Android launchers. This can only be fixed by your device manufacturer via an update.</li><li><b>3. Wallpapers</b> - This Android launcher provides a new wallpaper daily. You can also set any wallpaper you want from your phone settings or Gallery/Photos app.</li></ul><p>Our About page in settings has rest of the FAQs and several other tips to help you make the best usage of Olauncher. Please check it out.</p><p><b>Accessibility Service:</b> Our Accessibility Service is used exclusively to let you turn off your phone’s screen with a double-tap gesture. It is optional, disabled by default and doesn’t collect or share any data.</p><p>P.S. Thank you for checking out the description till the end. Only a few very special people do that. Take care! ❤️</p>
+<p><b>Your home screen is a bullet journal.</b></p>
+<p>Bullet Launcher is a minimal Android launcher built around rapid logging. Open your phone to the Daily Log — capture tasks, events, and notes — then reach apps from a simple bottom dock.</p>
+<p><br><b>BULLET JOURNAL HOME</b></p>
+<ul>
+<li><b>Monthly · Daily · Future</b> — swipe between logs on the home screen.</li>
+<li><b>Rapid logging</b> — • tasks, ○ events, – notes, plus ★ priority.</li>
+<li><b>Tap to complete</b> — long-press to edit or delete (never an accidental wipe).</li>
+<li><b>FAB +</b> — add a bullet with type, schedule, and tags.</li>
+<li><b>Index</b> — jump to Unscheduled and tag collections like Personal or Work.</li>
+</ul>
+<p><br><b>HOME APPS &amp; GESTURES</b></p>
+<ul>
+<li><b>Bottom dock</b> — up to 5×3 app slots; one slot opens the full app drawer.</li>
+<li><b>Swipe up</b> — expands the home apps sheet (never opens the full drawer).</li>
+<li><b>Drawer button</b> — opens the full app list as an overlay so the dock stays usable.</li>
+<li><b>Swipe down</b> — closes the drawer or collapses the sheet; notifications/search only when both are closed.</li>
+<li><b>Home</b> — closes the drawer and returns you to the Daily Log.</li>
+</ul>
+<p><br><b>CALENDAR SYNC</b></p>
+<p>Event bullets can sync both ways with your device / Google Calendar. Choose which calendars appear under Settings → Calendars to sync.</p>
+<p><br><b>PRIVACY &amp; PRINCIPLES</b></p>
+<ul>
+<li>No ads.</li>
+<li>No account required.</li>
+<li>Open source (GPLv3).</li>
+<li>Journal data stays on your device; calendar and location are only used when you enable those features.</li>
+</ul>
+<p><br><b>GETTING STARTED</b></p>
+<ol>
+<li>Install Bullet Launcher.</li>
+<li>Set it as your default Home app when Android asks.</li>
+<li>Use the seeded sample bullets on first launch to learn the journal, then replace them with yours.</li>
+</ol>
+<p>Started from Olauncher — reshaped into a bullet-journal home screen while keeping the same spirit of simplicity.</p>
