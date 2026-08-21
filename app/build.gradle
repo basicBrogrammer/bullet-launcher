@@ -18,8 +18,8 @@ def sentryDsn = System.getenv("SENTRY_DSN")
         ?: localProperties.getProperty("sentry.dsn", "")
         ?: sentryProperties.getProperty("dsn", "")
 
-def sentryOrg = sentryProperties.getProperty("defaults.org", "")
-def sentryProject = sentryProperties.getProperty("defaults.project", "")
+def sentryOrg = sentryProperties.getProperty("defaults.org", "basic-vibes")
+def sentryProject = sentryProperties.getProperty("defaults.project", "bullet-launcher")
 def sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN") ?: sentryProperties.getProperty("auth.token", "")
 
 android {

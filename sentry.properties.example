@@ -1,7 +1,7 @@
 # Copy to sentry.properties (gitignored) or set sentry.dsn in local.properties.
 # Auth token is only required for release ProGuard mapping uploads.
 
-defaults.org=your-org-slug
+defaults.org=basic-vibes
 defaults.project=bullet-launcher
 auth.token=your-sentry-auth-token
-dsn=https://examplePublicKey@o0.ingest.sentry.io/0
+dsn=https://<public-key>@o<org-id>.ingest.us.sentry.io/<project-id>

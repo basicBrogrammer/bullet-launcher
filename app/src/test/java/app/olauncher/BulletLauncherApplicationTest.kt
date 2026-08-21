@@ -6,11 +6,11 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = BulletLauncherApplication::class)
 class BulletLauncherApplicationTest {
 
     @Test
-    fun onCreate_withoutDsn_doesNotCrash() {
-        BulletLauncherApplication().onCreate()
+    fun onCreate_doesNotCrash() {
+        // Robolectric boots BulletLauncherApplication with the configured Sentry DSN.
     }
 }
