@@ -2,6 +2,7 @@
 *.jks
 .gradle
 /local.properties
+/sentry.properties
 /.idea/*
 /.idea/caches
 /.idea/libraries

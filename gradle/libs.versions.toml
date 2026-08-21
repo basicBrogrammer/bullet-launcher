@@ -1,4 +1,5 @@
 [versions]
+sentryAndroidGradlePlugin = "6.19.0"
 appcompat = "1.7.0"
 coreKtx = "1.16.0"
 gradle = "8.9.1"
@@ -11,6 +12,7 @@ recyclerview = "1.4.0"
 viewpager2 = "1.1.0"
 workRuntimeKtx = "2.10.1"
 [libraries]
+sentry-android-gradle-plugin = { module = "io.sentry:sentry-android-gradle-plugin", version.ref = "sentryAndroidGradlePlugin" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
