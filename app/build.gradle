@@ -1,5 +1,27 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'io.sentry.android.gradle'
+
+def sentryProperties = new Properties()
+def sentryPropsFile = rootProject.file("sentry.properties")
+if (sentryPropsFile.exists()) {
+    sentryPropsFile.withInputStream { sentryProperties.load(it) }
+}
+
+def localProperties = new Properties()
+def localPropsFile = rootProject.file("local.properties")
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProperties.load(it) }
+}
+
+def sentryDsn = System.getenv("SENTRY_DSN")
+        ?: localProperties.getProperty("sentry.dsn", "")
+        ?: sentryProperties.getProperty("dsn", "")
+        ?: "https://1e661ba0307bd3780b77beed4c9e750f@o552055.ingest.us.sentry.io/4511951392538624"
+
+def sentryOrg = sentryProperties.getProperty("defaults.org", "basic-vibes")
+def sentryProject = sentryProperties.getProperty("defaults.project", "bullet-launcher")
+def sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN") ?: sentryProperties.getProperty("auth.token", "")
 
 android {
     compileSdk 35
@@ -22,6 +44,8 @@ android {
 
         resourceConfigurations += ["en", "ar", "de", "es-rES", "es-rUS", "fr", "he", "hr", "hu", "in", "it", "ja", "nl", "pl", "pt-rBR", "ru-rRU", "sv", "tr", "uk", "zh"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "SENTRY_DSN", "\"${sentryDsn.replace("\"", "\\\"")}\""
     }
 
     buildTypes {
@@ -47,6 +71,26 @@ android {
         }
     }
     namespace 'app.olauncher'
+}
+
+sentry {
+    debug = false
+    org = sentryOrg
+    projectName = sentryProject
+    authToken = sentryAuthToken
+    includeProguardMapping = true
+    autoUploadProguardMapping = !sentryAuthToken.isEmpty()
+    tracingInstrumentation {
+        enabled = true
+        features = [
+                io.sentry.android.gradle.extensions.InstrumentationFeature.DATABASE,
+                io.sentry.android.gradle.extensions.InstrumentationFeature.FILE_IO,
+        ]
+    }
+    autoInstallation {
+        enabled = true
+        sentryVersion = '8.53.0'
+    }
 }
 
 dependencies {
