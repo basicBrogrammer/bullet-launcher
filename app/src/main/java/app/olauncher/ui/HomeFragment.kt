@@ -978,6 +978,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             if (expanded) R.string.collapse_apps_sheet else R.string.expand_apps_sheet
         )
         binding.homeAppsBottomSheet.post {
+            if (!isAdded || _binding == null) return@post
             updateDrawerOverlayPadding()
             updateAddButtonMargin()
         }

@@ -26,6 +26,7 @@ import app.olauncher.databinding.ActivityMainBinding
 import app.olauncher.helper.getColorFromAttr
 import app.olauncher.helper.hasBeenDays
 import app.olauncher.helper.hasBeenHours
+import app.olauncher.helper.shouldRestartLauncher
 import app.olauncher.helper.hasBeenMinutes
 import app.olauncher.helper.isDarkThemeOn
 import app.olauncher.helper.isDaySince
@@ -348,12 +349,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun restartLauncherOrCheckTheme(forceRestart: Boolean = false) {
-        if (forceRestart || prefs.launcherRestartTimestamp.hasBeenHours(4)) {
-            prefs.launcherRestartTimestamp = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        if (forceRestart || shouldRestartLauncher(prefs.launcherRestartTimestamp, now)) {
+            prefs.launcherRestartTimestamp = now
             cacheDir.deleteRecursively()
             recreate()
-        } else
+        } else {
+            if (prefs.launcherRestartTimestamp == 0L) {
+                prefs.launcherRestartTimestamp = now
+            }
             checkTheme()
+        }
     }
 
     private fun checkTheme() {
