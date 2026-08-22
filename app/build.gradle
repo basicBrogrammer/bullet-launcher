@@ -23,6 +23,12 @@ def sentryOrg = sentryProperties.getProperty("defaults.org", "basic-vibes")
 def sentryProject = sentryProperties.getProperty("defaults.project", "bullet-launcher")
 def sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN") ?: sentryProperties.getProperty("auth.token", "")
 
+def releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+def releaseKeystorePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+def releaseKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
+def releaseKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+def hasReleaseSigning = releaseKeystorePath != null && !releaseKeystorePath.isBlank()
+
 android {
     compileSdk 35
 
@@ -53,6 +59,9 @@ android {
             debuggable false
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
         debug {
             debuggable true
@@ -71,6 +80,17 @@ android {
         }
     }
     namespace 'app.olauncher'
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
 }
 
 sentry {
