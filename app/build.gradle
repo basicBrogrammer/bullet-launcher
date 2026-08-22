@@ -41,6 +41,17 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "app.bulletlauncher"
         minSdkVersion 24
@@ -80,17 +91,6 @@ android {
         }
     }
     namespace 'app.olauncher'
-
-    signingConfigs {
-        release {
-            if (hasReleaseSigning) {
-                storeFile file(releaseKeystorePath)
-                storePassword releaseKeystorePassword
-                keyAlias releaseKeyAlias
-                keyPassword releaseKeyPassword
-            }
-        }
-    }
 }
 
 sentry {
