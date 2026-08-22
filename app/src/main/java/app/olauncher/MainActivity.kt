@@ -348,6 +348,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun restartLauncherOrCheckTheme(forceRestart: Boolean = false) {
+        if (prefs.launcherRestartTimestamp == 0L) {
+            prefs.launcherRestartTimestamp = System.currentTimeMillis()
+        }
         if (forceRestart || prefs.launcherRestartTimestamp.hasBeenHours(4)) {
             prefs.launcherRestartTimestamp = System.currentTimeMillis()
             cacheDir.deleteRecursively()
