@@ -136,6 +136,10 @@ dependencies {
     //Material dependency
     implementation libs.material
 
+    // On-device Gemini Nano via Android AICore (Prompt API). Safe on phones
+    // without AICore: checkStatus returns UNAVAILABLE and we use the parser.
+    implementation "com.google.mlkit:genai-prompt:1.0.0-beta2"
+
     // Test-only: JVM screenshot rendering for PR demos (no emulator/device needed).
     // These are testImplementation only and do NOT affect the app APK.
     testImplementation 'junit:junit:4.13.2'

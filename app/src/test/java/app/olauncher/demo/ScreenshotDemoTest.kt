@@ -306,6 +306,18 @@ class ScreenshotDemoTest {
     }
 
     @Test
+    fun askJournal() = capture("05e_ask_journal", R.layout.dialog_ask_journal) { _, root ->
+        root.findViewById<EditText>(R.id.askInput).setText("add buy milk tomorrow")
+        root.findViewById<TextView>(R.id.engineStatus).setText(R.string.ask_journal_engine_nano)
+        root.findViewById<TextView>(R.id.askResult).apply {
+            visibility = View.VISIBLE
+            text = "Added task · Buy milk"
+        }
+        root.findViewById<View>(R.id.downloadButton).visibility = View.GONE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
     fun editBullet() = capture("05d_edit_bullet", R.layout.dialog_add_bullet) { _, root ->
         root.findViewById<TextView>(R.id.dialogTitle).setText(R.string.edit_entry)
         root.findViewById<EditText>(R.id.entryInput).setText("Team standup")
@@ -394,7 +406,7 @@ class ScreenshotDemoTest {
         )
         recycler.adapter = adapter
         adapter.setAppList(demoAppList())
-        root.findViewById<View>(R.id.addBulletButton).visibility = View.GONE
+        root.findViewById<View>(R.id.journalActionButtons).visibility = View.GONE
     }
 
     private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean, scrim: Boolean = true) {
@@ -480,11 +492,11 @@ class ScreenshotDemoTest {
             }
         }
         root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
-        root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
-        val fab = root.findViewById<View>(R.id.addBulletButton)
-        val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
-        fabParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
-        fab.layoutParams = fabParams
+        root.findViewById<View>(R.id.journalActionButtons).visibility = View.VISIBLE
+        val actions = root.findViewById<View>(R.id.journalActionButtons)
+        val actionParams = actions.layoutParams as android.widget.FrameLayout.LayoutParams
+        actionParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
+        actions.layoutParams = actionParams
     }
 
     @Test

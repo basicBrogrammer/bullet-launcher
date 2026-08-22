@@ -286,19 +286,38 @@
         </GridLayout>
     </LinearLayout>
 
-    <!-- Add bullet FAB — visible on all journal pages -->
-    <ImageView
-        android:id="@+id/addBulletButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+    <!-- Ask journal + add bullet — visible on all journal pages -->
+    <LinearLayout
+        android:id="@+id/journalActionButtons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="160dp"
-        android:background="@drawable/bg_fab_add"
-        android:contentDescription="@string/add_bullet"
         android:elevation="20dp"
-        android:padding="14dp"
-        android:src="@drawable/ic_add"
-        android:tint="?attr/primaryColor" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/askJournalButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_fab_add"
+            android:contentDescription="@string/ask_journal"
+            android:padding="12dp"
+            android:src="@drawable/ic_ask"
+            android:tint="?attr/primaryColor" />
+
+        <ImageView
+            android:id="@+id/addBulletButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_fab_add"
+            android:contentDescription="@string/add_bullet"
+            android:padding="14dp"
+            android:src="@drawable/ic_add"
+            android:tint="?attr/primaryColor" />
+    </LinearLayout>
 
     <!-- Set default launcher -->
     <TextView

@@ -20,3 +20,7 @@
 -keepattributes LineNumberTable,SourceFile
 -dontwarn io.sentry.**
 -keep class io.sentry.** { *; }
+
+# ML Kit GenAI / Gemini Nano (AICore client)
+-keep class com.google.mlkit.genai.** { *; }
+-dontwarn com.google.mlkit.genai.**
