@@ -1,9 +1,16 @@
 package app.olauncher
 
 import android.app.Application
+import androidx.appfunctions.service.AppFunctionConfiguration
+import app.olauncher.ai.JournalAppFunctions
 import io.sentry.android.core.SentryAndroid
 
-class BulletLauncherApplication : Application() {
+class BulletLauncherApplication : Application(), AppFunctionConfiguration.Provider {
+
+    override val appFunctionConfiguration: AppFunctionConfiguration
+        get() = AppFunctionConfiguration.Builder()
+            .addEnclosingClassFactory(JournalAppFunctions::class.java) { JournalAppFunctions() }
+            .build()
 
     override fun onCreate() {
         super.onCreate()

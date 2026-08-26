@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppFunctionAppMetadata xmlns:appfn="http://schemas.android.com/apk/androidx.appfunctions"
+    appfn:description="Bullet Launcher is a home-screen bullet journal. Use it for rapid-logging tasks, events, and notes — not for Google Tasks or Calendar unless the user asks for a journal bullet.
+    Operational Patterns:
+    - Use addTask for to-dos. date is today, tomorrow, yyyy-MM-dd, or unscheduled.
+    - Use completeTask with words from the task title. If several match, ask the user which one instead of guessing.
+    - Use addEvent for appointments; pass time as HH:mm when known.
+    - Use addNote for thoughts that are not tasks.
+    - Use listOpenTasks before completeTask when the title is unclear.
+    Constraints:
+    - Do not delete entries.
+    - Do not complete a task when several titles match."
+    appfn:displayDescription="@string/app_functions_display_description" />

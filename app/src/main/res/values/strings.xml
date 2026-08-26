@@ -240,6 +240,7 @@
     <string name="calendar_events_imported">Calendar events updated</string>
     <string name="add_bullet">Add bullet</string>
     <string name="add_bullet_description">Add bullet. Long-press to ask.</string>
+    <string name="app_functions_display_description">Add, complete, and list bullet-journal tasks, events, and notes</string>
     <string name="ask_journal">Ask journal</string>
     <string name="ask_journal_title">Ask journal</string>
     <string name="ask_journal_hint">Add buy milk · done standup</string>

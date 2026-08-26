@@ -167,7 +167,7 @@ object JournalToolParser {
         }
     }
 
-    private fun parseTimeMinutes(raw: String?): Int? {
+    internal fun parseTimeMinutes(raw: String?): Int? {
         val value = raw?.trim().orEmpty()
         if (value.isEmpty() || value == "null") return null
         val military = Regex("^([01]?\\d|2[0-3]):([0-5]\\d)$").matchEntire(value)

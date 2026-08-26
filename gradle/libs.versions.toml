@@ -4,6 +4,7 @@ appcompat = "1.7.0"
 coreKtx = "1.16.0"
 gradle = "8.9.1"
 kotlinStdlib = "2.1.20"
+ksp = "2.1.20-1.0.32"
 lifecycleExtensions = "2.2.0"
 lifecycleViewmodelKtx = "2.9.0"
 material = "1.12.0"
@@ -17,6 +18,7 @@ appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat"
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlinStdlib" }
+ksp-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlinStdlib" }
 lifecycle-extensions = { module = "androidx.lifecycle:lifecycle-extensions", version.ref = "lifecycleExtensions" }
 lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }

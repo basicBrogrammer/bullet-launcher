@@ -118,6 +118,10 @@
             </intent-filter>
         </service>
 
+        <property
+            android:name="android.app.appfunctions.app_metadata"
+            android:resource="@xml/app_metadata" />
+
     </application>
 
 </manifest>
