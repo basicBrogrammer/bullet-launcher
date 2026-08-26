@@ -306,6 +306,18 @@ class ScreenshotDemoTest {
     }
 
     @Test
+    fun askJournal() = capture("05e_ask_journal", R.layout.dialog_ask_journal) { _, root ->
+        root.findViewById<EditText>(R.id.askInput).setText("add buy milk tomorrow")
+        root.findViewById<TextView>(R.id.engineStatus).setText(R.string.ask_journal_engine_nano)
+        root.findViewById<TextView>(R.id.askResult).apply {
+            visibility = View.VISIBLE
+            text = "Added task · Buy milk"
+        }
+        root.findViewById<View>(R.id.downloadButton).visibility = View.GONE
+        root.setBackgroundColor(Color.WHITE)
+    }
+
+    @Test
     fun editBullet() = capture("05d_edit_bullet", R.layout.dialog_add_bullet) { _, root ->
         root.findViewById<TextView>(R.id.dialogTitle).setText(R.string.edit_entry)
         root.findViewById<EditText>(R.id.entryInput).setText("Team standup")

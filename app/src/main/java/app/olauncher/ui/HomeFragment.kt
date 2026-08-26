@@ -340,6 +340,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.tvScreenTime.setOnClickListener(this)
         binding.tvScreenTime.setOnLongClickListener(this)
         binding.addBulletButton.setOnClickListener(this)
+        binding.addBulletButton.setOnLongClickListener {
+            showAskJournalDialog()
+            true
+        }
 
         // These fire only on d-pad/keyboard events; touch is consumed by ViewSwipeTouchListener
         homeAppViews.forEach { appView ->
@@ -504,6 +508,15 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         if (destination is IndexDestination.Tag && entries.isEmpty()) {
             // Keep showing empty state; user can Index elsewhere.
         }
+    }
+
+    private fun showAskJournalDialog() {
+        AskJournalDialog.show(
+            context = requireContext(),
+            scope = viewLifecycleOwner.lifecycleScope,
+            store = journalStore,
+            onChanged = { refreshJournal() },
+        )
     }
 
     private fun showAddBulletDialog() {

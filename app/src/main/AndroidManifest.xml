@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- genai-prompt declares minSdk 26; Nano is already gated to API 34 at runtime. -->
+    <uses-sdk tools:overrideLibrary="com.google.mlkit.genai.prompt,com.google.mlkit.genai.common" />
+
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <uses-permission
@@ -23,6 +26,10 @@
     <!--Current-location weather on the home header-->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Gemini Nano / AICore is optional; the parser covers other devices. -->
+    <uses-feature
+        android:name="android.software.ai_capabilities"
+        android:required="false" />
 
     <application
         android:name=".BulletLauncherApplication"
@@ -110,6 +117,10 @@
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
         </service>
+
+        <property
+            android:name="android.app.appfunctions.app_metadata"
+            android:resource="@xml/app_metadata" />
 
     </application>
 

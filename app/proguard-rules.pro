@@ -20,3 +20,12 @@
 -keepattributes LineNumberTable,SourceFile
 -dontwarn io.sentry.**
 -keep class io.sentry.** { *; }
+
+# ML Kit GenAI / Gemini Nano (AICore client)
+-keep class com.google.mlkit.genai.** { *; }
+-dontwarn com.google.mlkit.genai.**
+
+# App Functions (system assistant tools)
+-keep class androidx.appfunctions.** { *; }
+-keep class app.olauncher.ai.** { *; }
+-dontwarn androidx.appfunctions.**

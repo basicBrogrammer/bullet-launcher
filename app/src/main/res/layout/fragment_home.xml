@@ -284,7 +284,7 @@
         </GridLayout>
     </LinearLayout>
 
-    <!-- Add bullet FAB — visible on all journal pages -->
+    <!-- Add bullet FAB — visible on all journal pages. Long-press opens Ask journal. -->
     <ImageView
         android:id="@+id/addBulletButton"
         android:layout_width="56dp"
@@ -292,7 +292,7 @@
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="120dp"
         android:background="@drawable/bg_fab_add"
-        android:contentDescription="@string/add_bullet"
+        android:contentDescription="@string/add_bullet_description"
         android:elevation="20dp"
         android:padding="14dp"
         android:src="@drawable/ic_add"

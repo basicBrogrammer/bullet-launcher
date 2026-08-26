@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.google.devtools.ksp'
 apply plugin: 'io.sentry.android.gradle'
 
 def sentryProperties = new Properties()
@@ -30,7 +31,7 @@ def releaseKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
 def hasReleaseSigning = releaseKeystorePath != null && !releaseKeystorePath.isBlank()
 
 android {
-    compileSdk 35
+    compileSdk 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -93,6 +94,11 @@ android {
     namespace 'app.olauncher'
 }
 
+ksp {
+    arg("appfunctions:aggregateAppFunctions", "true")
+    arg("appfunctions:generateMetadataFromSchema", "false")
+}
+
 sentry {
     debug = false
     org = sentryOrg
@@ -135,6 +141,16 @@ dependencies {
 
     //Material dependency
     implementation libs.material
+
+    // On-device Gemini Nano via Android AICore (Prompt API). Safe on phones
+    // without AICore: checkStatus returns UNAVAILABLE and we use the parser.
+    implementation "com.google.mlkit:genai-prompt:1.0.0-beta2"
+
+    // Android App Functions — system assistants (Gemini) call the same journal tools.
+    // alpha10 needs AGP 9.1 / compileSdk 37; stay on alpha08 to match AGP 8.9.1.
+    implementation "androidx.appfunctions:appfunctions:1.0.0-alpha08"
+    implementation "androidx.appfunctions:appfunctions-service:1.0.0-alpha08"
+    ksp "androidx.appfunctions:appfunctions-compiler:1.0.0-alpha08"
 
     // Test-only: JVM screenshot rendering for PR demos (no emulator/device needed).
     // These are testImplementation only and do NOT affect the app APK.
