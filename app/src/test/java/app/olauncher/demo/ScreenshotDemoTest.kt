@@ -406,7 +406,7 @@ class ScreenshotDemoTest {
         )
         recycler.adapter = adapter
         adapter.setAppList(demoAppList())
-        root.findViewById<View>(R.id.journalActionButtons).visibility = View.GONE
+        root.findViewById<View>(R.id.addBulletButton).visibility = View.GONE
     }
 
     private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean, scrim: Boolean = true) {
@@ -492,11 +492,11 @@ class ScreenshotDemoTest {
             }
         }
         root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
-        root.findViewById<View>(R.id.journalActionButtons).visibility = View.VISIBLE
-        val actions = root.findViewById<View>(R.id.journalActionButtons)
-        val actionParams = actions.layoutParams as android.widget.FrameLayout.LayoutParams
-        actionParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
-        actions.layoutParams = actionParams
+        root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
+        val fab = root.findViewById<View>(R.id.addBulletButton)
+        val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
+        fabParams.bottomMargin = ((if (expanded) 240 else 120) * density).toInt()
+        fab.layoutParams = fabParams
     }
 
     @Test

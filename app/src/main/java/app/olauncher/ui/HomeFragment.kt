@@ -205,7 +205,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             R.id.setDefaultLauncher -> viewModel.resetLauncherLiveData.call()
             R.id.tvScreenTime -> openScreenTimeDigitalWellbeing()
             R.id.addBulletButton -> showAddBulletDialog()
-            R.id.askJournalButton -> showAskJournalDialog()
 
             else -> {
                 try { // Launch app
@@ -345,7 +344,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             showAskJournalDialog()
             true
         }
-        binding.askJournalButton.setOnClickListener(this)
 
         // These fire only on d-pad/keyboard events; touch is consumed by ViewSwipeTouchListener
         homeAppViews.forEach { appView ->
@@ -1012,9 +1010,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         } else {
             72.dpToPx()
         }
-        val params = binding.journalActionButtons.layoutParams as FrameLayout.LayoutParams
+        val params = binding.addBulletButton.layoutParams as FrameLayout.LayoutParams
         params.bottomMargin = fabMargin
-        binding.journalActionButtons.layoutParams = params
+        binding.addBulletButton.layoutParams = params
         val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
         pagerParams.bottomMargin = pagerMargin
         // Midway header (28dp) + clock row clearance.
