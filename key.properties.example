@@ -1,0 +1,7 @@
+# Copy to key.properties (git-ignored) and fill in your release keystore paths.
+# Then wire signingConfigs in app/build.gradle when you are ready to build a Play AAB.
+#
+# storeFile=/absolute/path/to/bullet-launcher-upload.jks
+# storePassword=...
+# keyAlias=bullet
+# keyPassword=...

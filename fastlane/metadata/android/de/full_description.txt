@@ -1,0 +1,28 @@
+<p><b>Dein Homescreen ist ein Bullet Journal.</b></p>
+<p>Bullet Launcher ist ein minimalistischer Android-Launcher rund um Rapid Logging. Öffne dein Telefon im Daily Log — erfasse Tasks, Events und Notizen — und starte Apps über ein schlichtes Dock.</p>
+<p><br><b>BULLET-JOURNAL-HOME</b></p>
+<ul>
+<li><b>Monthly · Daily · Future</b> — zwischen den Logs auf dem Homescreen wischen.</li>
+<li><b>Rapid Logging</b> — • Tasks, ○ Events, – Notizen, plus ★ Priorität.</li>
+<li><b>Tippen zum Erledigen</b> — langes Drücken zum Bearbeiten oder Löschen.</li>
+<li><b>FAB +</b> — neuen Eintrag mit Typ, Termin und Tags hinzufügen.</li>
+<li><b>Index</b> — Unscheduled und Tag-Sammlungen wie Personal oder Work.</li>
+</ul>
+<p><br><b>HOME-APPS &amp; GESTEN</b></p>
+<ul>
+<li><b>Dock</b> — bis zu 5×3 Slots; ein Slot öffnet den App-Drawer.</li>
+<li><b>Nach oben wischen</b> — erweitert nur das Home-Apps-Sheet.</li>
+<li><b>Drawer-Taste</b> — öffnet die volle App-Liste als Overlay.</li>
+<li><b>Nach unten wischen</b> — schließt Drawer oder Sheet.</li>
+<li><b>Home</b> — schließt den Drawer und kehrt zum Daily Log zurück.</li>
+</ul>
+<p><br><b>KALENDER-SYNC</b></p>
+<p>Event-Bullets können mit dem Geräte-/Google-Kalender in beide Richtungen synchronisieren. Kalender unter Einstellungen wählen.</p>
+<p><br><b>PRIVATSPHÄRE</b></p>
+<ul>
+<li>Keine Werbung.</li>
+<li>Kein Konto nötig.</li>
+<li>Open Source (GPLv3).</li>
+<li>Journal-Daten bleiben auf dem Gerät.</li>
+</ul>
+<p>Aufbauend auf Olauncher — umgebaut zu einem Bullet-Journal-Homescreen.</p>
