@@ -56,9 +56,9 @@ android {
     defaultConfig {
         applicationId "app.bulletlauncher"
         minSdkVersion 24
-        targetSdkVersion 35
-        versionCode 112
-        versionName "v6.7.21"
+        targetSdkVersion 36
+        versionCode 113
+        versionName "v6.7.22"
 
         resourceConfigurations += ["en", "ar", "de", "es-rES", "es-rUS", "fr", "he", "hr", "hu", "in", "it", "ja", "nl", "pl", "pt-rBR", "ru-rRU", "sv", "tr", "uk", "zh"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -172,6 +172,25 @@ if (renderingDemos) {
         }
     }
 }
+def playMinTargetSdk = 36
+
+tasks.register("checkPlayTargetSdk") {
+    group = "verification"
+    description = "Fail when targetSdkVersion is below the Google Play update floor."
+    doLast {
+        def api = android.defaultConfig.targetSdk
+        if (api == null || api < playMinTargetSdk) {
+            throw new GradleException(
+                    "Google Play rejects this update. targetSdkVersion is ${api}, and Play requires ${playMinTargetSdk} (Android 16) or higher since 2026-08-31. Raise targetSdkVersion in app/build.gradle. https://support.google.com/googleplay/android-developer/answer/11926878"
+            )
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("checkPlayTargetSdk")
+}
+
 tasks.register("renderDemoScreens") {
     group = "verification"
     description = "Render Olauncher screens to PNGs (build/demo-screenshots) for PR demos."
