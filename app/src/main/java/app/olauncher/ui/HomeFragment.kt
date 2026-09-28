@@ -1151,6 +1151,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun launchShortcut(shortcutId: String, packageName: String, shortcutLabel: String, userString: String) {
+        collapseHomeAppsSheet()
         viewModel.selectedApp(
             AppModel.PinnedShortcut(
                 shortcutId = shortcutId,
@@ -1165,6 +1166,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun launchApp(appName: String, packageName: String, activityClassName: String?, userString: String) {
+        collapseHomeAppsSheet()
         viewModel.selectedApp(
             AppModel.App(
                 appLabel = appName,
@@ -1191,6 +1193,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             isShortcut = prefs.getIsShortcut(location),
             userString = prefs.getAppUser(location)
         )
+    }
+
+    private fun collapseHomeAppsSheet() {
+        if (prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(false)
     }
 
     private fun openSwipeRightApp() {
@@ -1264,8 +1270,11 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             .replace(R.id.appDrawerOverlay, drawer, "home_app_drawer")
             .commitAllowingStateLoss()
         binding.appDrawerOverlay.isVisible = true
-        // Expand so all dock slots are available as drop targets.
-        if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
+        if (flag in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_15) {
+            if (!prefs.homeAppsSheetExpanded) setHomeAppsSheetExpanded(true)
+        } else if (flag == Constants.FLAG_LAUNCH_APP) {
+            collapseHomeAppsSheet()
+        }
         updateDrawerOverlayPadding()
     }
 
