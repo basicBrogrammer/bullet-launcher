@@ -281,10 +281,6 @@ class JournalStore(context: Context) {
         saveAll(getAll().filterNot { it.id == id })
     }
 
-    /**
-     * User-facing delete. A linked calendar event stays suppressed so the next
-     * sync does not import that event again.
-     */
     internal fun deleteUserEntry(id: String) {
         getById(id)?.calendarEventId?.let { suppressCalendarEvent(it) }
         delete(id)

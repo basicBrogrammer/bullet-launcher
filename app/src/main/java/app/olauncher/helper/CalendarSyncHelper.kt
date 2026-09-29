@@ -259,9 +259,6 @@ object CalendarSyncHelper {
      * Recurring (RRULE) events are imported for the current month's Daily log
      * but never into the Future log, which is reserved for one-off upcoming
      * events. Previously imported Future repeats are removed on the next sync.
-     *
-     * Each calendar event keeps one journal row, pinned to today's instance
-     * when that day has one.
      */
     fun syncIntoJournal(context: Context, store: JournalStore): Boolean {
         if (!hasCalendarPermissions(context)) return false
@@ -306,7 +303,6 @@ object CalendarSyncHelper {
                     monthKey > currentMonth -> JournalLog.FUTURE to monthKey
                     else -> JournalLog.DAILY to dateKey
                 }
-                // Skip repeat events on the Future log (still sync current-month instances).
                 if (log == JournalLog.FUTURE && remote.eventId in recurringFutureIds) continue
                 add(PlacedInstance(remote, title, dateKey, timeMinutes, log, storeKey))
             }
@@ -353,7 +349,6 @@ object CalendarSyncHelper {
 
         // Drop journal events that disappeared from the calendar within the sync window,
         // or that belong to calendars the user turned off for sync.
-        // A suppressed event is left unseen on purpose so its row is removed here.
         for (entry in linked) {
             if (entry.id in seenEntryIds) continue
             val eventId = entry.calendarEventId ?: continue
@@ -391,11 +386,6 @@ object CalendarSyncHelper {
         return changed
     }
 
-    /**
-     * Today's instance, else the soonest later day, else the most recent
-     * earlier day. The pick uses the instances and today only. Folding each
-     * instance into the row's previous date moved the bullet on every sync.
-     */
     private fun chooseStableInstance(instances: List<PlacedInstance>, today: String): PlacedInstance {
         instances.filter { it.dateKey == today }.minByOrNull { it.remote.beginMillis }?.let { return it }
         instances.filter { it.dateKey > today }.minByOrNull { it.dateKey }?.let { return it }
