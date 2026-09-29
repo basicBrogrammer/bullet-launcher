@@ -452,7 +452,7 @@ object CalendarSyncHelper {
         )
 
         return try {
-            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            val instances = context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 val eventIdIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.EVENT_ID)
                 val calIdIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.CALENDAR_ID)
                 val titleIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.TITLE)
@@ -477,12 +477,54 @@ object CalendarSyncHelper {
                     }
                 }
             } ?: emptyList()
+            val inactive = inactiveEventIds(context, instances.mapTo(mutableSetOf()) { it.eventId })
+            instances.filter { it.eventId !in inactive }
         } catch (e: SecurityException) {
             Log.e(TAG, "Missing calendar permission while querying instances", e)
             emptyList()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query calendar instances", e)
             emptyList()
+        }
+    }
+
+    /**
+     * Instance rows whose event is deleted, cancelled, or already gone.
+     * A removed series can still appear in Instances until that table is rebuilt.
+     */
+    private fun inactiveEventIds(context: Context, eventIds: Set<Long>): Set<Long> {
+        if (eventIds.isEmpty()) return emptySet()
+        return try {
+            val idList = eventIds.joinToString(",")
+            val found = mutableSetOf<Long>()
+            val inactive = mutableSetOf<Long>()
+            context.contentResolver.query(
+                CalendarContract.Events.CONTENT_URI,
+                arrayOf(
+                    CalendarContract.Events._ID,
+                    CalendarContract.Events.DELETED,
+                    CalendarContract.Events.STATUS,
+                ),
+                "${CalendarContract.Events._ID} IN ($idList)",
+                null,
+                null,
+            )?.use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events._ID)
+                val deletedIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events.DELETED)
+                val statusIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events.STATUS)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idIdx)
+                    found.add(id)
+                    val deleted = !cursor.isNull(deletedIdx) && cursor.getInt(deletedIdx) == 1
+                    val cancelled = !cursor.isNull(statusIdx) &&
+                        cursor.getInt(statusIdx) == CalendarContract.Events.STATUS_CANCELED
+                    if (deleted || cancelled) inactive.add(id)
+                }
+            } ?: return emptySet()
+            inactive.apply { addAll(eventIds - found) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check deleted calendar events", e)
+            emptySet()
         }
     }
 

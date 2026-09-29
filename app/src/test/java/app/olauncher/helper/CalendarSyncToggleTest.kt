@@ -129,6 +129,58 @@ class CalendarSyncToggleTest {
     }
 
     @Test
+    fun seriesDeletedInCalendarStaysOutOfTheJournal() {
+        val store = journalStore()
+        val today = store.todayKey()
+        store.add(
+            text = "Standup",
+            type = BulletType.EVENT,
+            log = JournalLog.DAILY,
+            dateKey = today,
+            calendarEventId = EVENT_ID,
+            calendarId = CALENDAR_ID,
+            fromCalendar = true,
+            timeMinutes = 10 * 60,
+        )
+        provider.instances = listOf(
+            instance(today, "Standup"),
+            instance(otherDayInSameMonth(today), "Standup"),
+        )
+        provider.eventDeleted = true
+
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        assertEquals(emptyList<String>(), linkedDates(store))
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        assertEquals(emptyList<String>(), linkedDates(store))
+    }
+
+    @Test
+    fun seriesMissingFromCalendarStaysOutOfTheJournal() {
+        val store = journalStore()
+        val today = store.todayKey()
+        store.add(
+            text = "Standup",
+            type = BulletType.EVENT,
+            log = JournalLog.DAILY,
+            dateKey = today,
+            calendarEventId = EVENT_ID,
+            calendarId = CALENDAR_ID,
+            fromCalendar = true,
+            timeMinutes = 10 * 60,
+        )
+        provider.instances = listOf(
+            instance(today, "Standup"),
+            instance(otherDayInSameMonth(today), "Standup"),
+        )
+        provider.eventAbsent = true
+
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        assertEquals(emptyList<String>(), linkedDates(store))
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        assertEquals(emptyList<String>(), linkedDates(store))
+    }
+
+    @Test
     fun oneOffRescheduleLandsOnceAndStays() {
         val store = journalStore()
         val today = store.todayKey()
@@ -191,6 +243,8 @@ class CalendarSyncToggleTest {
 
     private class FakeCalendarProvider : ContentProvider() {
         var instances: List<InstanceRow> = emptyList()
+        var eventDeleted: Boolean = false
+        var eventAbsent: Boolean = false
 
         override fun onCreate(): Boolean = true
 
@@ -202,7 +256,7 @@ class CalendarSyncToggleTest {
             sortOrder: String?,
         ): Cursor {
             val path = uri.path.orEmpty()
-            if (!path.contains("instances")) return MatrixCursor(arrayOf(CalendarContract.Events._ID))
+            if (!path.contains("instances")) return eventsCursor(projection)
             val cursor = MatrixCursor(
                 arrayOf(
                     CalendarContract.Instances.EVENT_ID,
@@ -218,6 +272,27 @@ class CalendarSyncToggleTest {
                     arrayOf<Any>(row.eventId, row.calendarId, row.title, row.beginMillis, row.endMillis, 0),
                 )
             }
+            return cursor
+        }
+
+        private fun eventsCursor(projection: Array<out String>?): Cursor {
+            val columns = projection ?: arrayOf(CalendarContract.Events._ID)
+            val cursor = MatrixCursor(columns)
+            if (eventAbsent) return cursor
+            val row = arrayOfNulls<Any>(columns.size)
+            columns.forEachIndexed { index, column ->
+                row[index] = when (column) {
+                    CalendarContract.Events._ID -> EVENT_ID
+                    CalendarContract.Events.DELETED -> if (eventDeleted) 1 else 0
+                    CalendarContract.Events.STATUS -> if (eventDeleted) {
+                        CalendarContract.Events.STATUS_CANCELED
+                    } else {
+                        CalendarContract.Events.STATUS_CONFIRMED
+                    }
+                    else -> null
+                }
+            }
+            cursor.addRow(row)
             return cursor
         }
 
