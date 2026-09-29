@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Test Play version check
+        run: python3 -m unittest scripts/check_play_version_test.py
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:

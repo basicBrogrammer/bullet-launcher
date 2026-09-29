@@ -34,6 +34,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Test Play version check
+        run: python3 -m unittest scripts/check_play_version_test.py
+
+      - name: Check Play version code is unused
+        run: |
+          python3 -m pip install --quiet google-auth requests
+          python3 scripts/check_play_version.py
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
