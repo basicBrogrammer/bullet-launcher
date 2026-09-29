@@ -57,8 +57,8 @@ android {
         applicationId "app.bulletlauncher"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 113
-        versionName "v6.7.22"
+        versionCode 114
+        versionName "v6.7.23"
 
         resourceConfigurations += ["en", "ar", "de", "es-rES", "es-rUS", "fr", "he", "hr", "hu", "in", "it", "ja", "nl", "pl", "pt-rBR", "ru-rRU", "sv", "tr", "uk", "zh"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
