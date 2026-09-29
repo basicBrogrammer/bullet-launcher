@@ -16,7 +16,7 @@ Build with the Gradle wrapper (`./gradlew`).
   - **Back** closes the drawer; **Home** closes the drawer and returns to the Daily log.
 - **Drawer chrome:** opaque surface — paper (`drawerBackgroundLight` / `#F3EEE6`) in light mode, system grey (`drawerBackgroundDark` / `#2C2C2E`) in dark mode via `?attr/drawerBackgroundColor`.
 - Sideload debug APK (when present on a branch): `artifacts/bullet-launcher-debug.apk`.
-- **Play upload:** bump `versionCode` and `versionName` in `app/build.gradle` before each Play release. Play keeps a version code after a committed upload. `targetSdkVersion` must be at least 36 (Android 16). Google has required that for app updates since 2026-08-31. `:app:checkPlayTargetSdk` fails the build when it is lower, and `preBuild` runs that check, so the Play workflow stops before upload.
+- **Play upload:** bump `versionCode` and `versionName` in `app/build.gradle` before each Play release. `scripts/check_play_version.py` runs at the start of `.github/workflows/play-release.yml` and fails the job when `versionCode` is not higher than every code already on the Play tracks. `targetSdkVersion` must be at least 36 (Android 16). Google has required that for app updates since 2026-08-31. `:app:checkPlayTargetSdk` fails the build when it is lower, and `preBuild` runs that check.
 
 ## Cursor Cloud specific instructions
 
