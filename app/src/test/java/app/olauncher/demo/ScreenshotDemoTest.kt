@@ -505,6 +505,62 @@ class ScreenshotDemoTest {
     }
 
     @Test
+    fun homeWithFinishedTasks() = capture("09_clear_finished_before", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = false)
+        submitBullets(root, finishedAndOpenTasks())
+    }
+
+    @Test
+    fun homeClearFinishedConfirm() = capture("09b_clear_finished_confirm", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = false)
+        submitBullets(root, finishedAndOpenTasks())
+        val dim = View(activity).apply {
+            setBackgroundColor(Color.parseColor("#73000000"))
+        }
+        (root as ViewGroup).addView(
+            dim,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        val card = LayoutInflater.from(activity).inflate(R.layout.dialog_clear_finished, root, false)
+        card.findViewById<TextView>(R.id.clearFinishedMessage).text =
+            activity.resources.getQuantityString(R.plurals.clear_finished_message, 2, 2)
+        val width = (activity.resources.displayMetrics.widthPixels * 0.86f).toInt()
+        (root as ViewGroup).addView(
+            card,
+            android.widget.FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = android.view.Gravity.CENTER
+            },
+        )
+    }
+
+    @Test
+    fun homeAfterClearFinished() = capture("09c_clear_finished_after", R.layout.fragment_home) { activity, root ->
+        populateHomeDemo(activity, root, expanded = false)
+        submitBullets(
+            root,
+            listOf(
+                demoEntry("Team standup", BulletType.EVENT, timeMinutes = 10 * 60),
+                demoEntry("Call mom", BulletType.TASK),
+            ).map { JournalListItem.Bullet(it) },
+        )
+    }
+
+    private fun finishedAndOpenTasks(): List<JournalListItem> = listOf(
+        demoEntry("Morning pages", BulletType.TASK, completed = true),
+        demoEntry("Team standup", BulletType.EVENT, timeMinutes = 10 * 60),
+        demoEntry("Review monthly goals", BulletType.TASK, completed = true, tags = listOf("Work")),
+        demoEntry("Call mom", BulletType.TASK),
+    ).map { JournalListItem.Bullet(it) }
+
+    private fun submitBullets(root: View, items: List<JournalListItem>) {
+        val recycler = root.findViewById<RecyclerView>(R.id.bulletList)
+        (recycler.adapter as JournalBulletAdapter).submit(items)
+    }
+
+    @Test
     fun settingsCleaned() = capture("08_settings", R.layout.fragment_settings) { _, root ->
         root.findViewById<TextView>(R.id.syncCalendars).text = "2 selected"
         root.findViewById<TextView>(R.id.homeScrim).setText(R.string.on)

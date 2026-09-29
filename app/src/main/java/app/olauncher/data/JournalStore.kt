@@ -281,6 +281,22 @@ class JournalStore(context: Context) {
         saveAll(getAll().filterNot { it.id == id })
     }
 
+    fun countCompletedTasks(): Int =
+        getAll().count { it.isFinishedTask() }
+
+    /**
+     * Removes every completed task across Daily, Monthly, Future, and Unscheduled.
+     * Open tasks, events, and notes stay.
+     * @return how many tasks were removed
+     */
+    fun deleteCompletedTasks(): Int {
+        val all = getAll()
+        val remaining = all.filterNot { it.isFinishedTask() }
+        val removed = all.size - remaining.size
+        if (removed > 0) saveAll(remaining)
+        return removed
+    }
+
     fun setCalendarLink(
         id: String,
         calendarEventId: Long?,
