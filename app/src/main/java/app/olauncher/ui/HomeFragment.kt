@@ -1,12 +1,14 @@
 package app.olauncher.ui
 
 import android.Manifest
+import android.app.Dialog
 import android.app.admin.DevicePolicyManager
 import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.res.Configuration
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
 import android.view.DragEvent
@@ -46,6 +48,7 @@ import app.olauncher.data.JournalStore
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
 import app.olauncher.helper.CalendarSyncHelper
+import app.olauncher.helper.ShakeDetector
 import app.olauncher.helper.WeatherHelper
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
@@ -83,6 +86,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     /** Draft Event waiting for calendar permission / picker before it is saved. */
     private var pendingEventDraft: PendingEventDraft? = null
     private var locationPermissionRequested = false
+    private var shakeDetector: ShakeDetector? = null
+    private var clearFinishedDialog: Dialog? = null
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -193,6 +198,14 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         viewModel.isOlauncherDefault()
         if (prefs.showStatusBar) showStatusBar()
         else hideStatusBar()
+        startShakeToClear()
+    }
+
+    override fun onPause() {
+        clearFinishedDialog?.dismiss()
+        clearFinishedDialog = null
+        stopShakeToClear()
+        super.onPause()
     }
 
     override fun onClick(view: View) {
@@ -822,6 +835,43 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         if (entry.type == BulletType.TASK) {
             journalStore.toggleCompleted(entry.id)
             refreshJournal()
+        }
+    }
+
+    private fun startShakeToClear() {
+        if (shakeDetector != null) return
+        val sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+            ?: return
+        shakeDetector = ShakeDetector(
+            sensorManager,
+            onShake = {
+                if (!isAdded || _binding == null) return@ShakeDetector
+                if (!requireActivity().hasWindowFocus()) return@ShakeDetector
+                if (clearFinishedDialog?.isShowing == true) return@ShakeDetector
+                showClearFinishedDialog()
+            },
+        ).also { it.start() }
+    }
+
+    private fun stopShakeToClear() {
+        shakeDetector?.stop()
+        shakeDetector = null
+    }
+
+    private fun showClearFinishedDialog() {
+        val count = journalStore.countCompletedTasks()
+        clearFinishedDialog = ClearFinishedDialog.show(requireContext(), count) {
+            val removed = journalStore.deleteCompletedTasks()
+            refreshJournal()
+            if (removed > 0) {
+                requireContext().showToast(
+                    resources.getQuantityString(R.plurals.clear_finished_deleted, removed, removed),
+                )
+            }
+        }.also { dialog ->
+            dialog.setOnDismissListener {
+                if (clearFinishedDialog === dialog) clearFinishedDialog = null
+            }
         }
     }
 
@@ -1503,6 +1553,9 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     override fun onDestroyView() {
+        clearFinishedDialog?.dismiss()
+        clearFinishedDialog = null
+        stopShakeToClear()
         super.onDestroyView()
         _binding = null
     }

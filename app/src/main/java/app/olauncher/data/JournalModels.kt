@@ -59,6 +59,9 @@ data class JournalEntry(
         else -> type.symbol
     }
 
+    /** A task the user has marked done. Events and notes are never finished tasks. */
+    fun isFinishedTask(): Boolean = type == BulletType.TASK && completed
+
     /**
      * Title with optional time suffix for list rows.
      * @param militaryTime true → 24-hour (e.g. 15:30); false → 12-hour (e.g. 3:30 PM)

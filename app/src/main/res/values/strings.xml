@@ -230,6 +230,16 @@
     <string name="journal_monthly_empty">No entries this month yet</string>
     <string name="journal_section_empty">—</string>
     <string name="entry_deleted">Entry deleted</string>
+    <string name="clear_finished_title">Finished tasks</string>
+    <string name="clear_finished_none">No finished tasks to delete.</string>
+    <plurals name="clear_finished_message">
+        <item quantity="one">Delete %d finished task? Open tasks, events, and notes stay.</item>
+        <item quantity="other">Delete %d finished tasks? Open tasks, events, and notes stay.</item>
+    </plurals>
+    <plurals name="clear_finished_deleted">
+        <item quantity="one">Deleted %d finished task</item>
+        <item quantity="other">Deleted %d finished tasks</item>
+    </plurals>
     <string name="event_synced_to_calendar">Event added to calendar</string>
     <string name="event_calendar_permission_needed">Allow calendar access to sync events</string>
     <string name="event_calendar_sync_failed">Could not sync event to calendar</string>
