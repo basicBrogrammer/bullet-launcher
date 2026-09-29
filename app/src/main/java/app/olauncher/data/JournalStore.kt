@@ -281,6 +281,25 @@ class JournalStore(context: Context) {
         saveAll(getAll().filterNot { it.id == id })
     }
 
+    internal fun deleteUserEntry(id: String) {
+        getById(id)?.calendarEventId?.let { suppressCalendarEvent(it) }
+        delete(id)
+    }
+
+    internal fun suppressCalendarEvent(eventId: Long) {
+        if (eventId <= 0L) return
+        val ids = suppressedCalendarEventIds()
+        if (!ids.add(eventId.toString())) return
+        prefs.edit { putStringSet(KEY_SUPPRESSED_CALENDAR_EVENTS, ids) }
+    }
+
+    internal fun isCalendarEventSuppressed(eventId: Long): Boolean =
+        prefs.getStringSet(KEY_SUPPRESSED_CALENDAR_EVENTS, emptySet())
+            ?.contains(eventId.toString()) == true
+
+    private fun suppressedCalendarEventIds(): MutableSet<String> =
+        prefs.getStringSet(KEY_SUPPRESSED_CALENDAR_EVENTS, emptySet()).orEmpty().toMutableSet()
+
     fun countCompletedTasks(): Int =
         getAll().count { it.isFinishedTask() }
 
@@ -306,6 +325,12 @@ class JournalStore(context: Context) {
         val all = getAll().toMutableList()
         val index = all.indexOfFirst { it.id == id }
         if (index < 0) return null
+        if (calendarEventId != null) {
+            val ids = suppressedCalendarEventIds()
+            if (ids.remove(calendarEventId.toString())) {
+                prefs.edit { putStringSet(KEY_SUPPRESSED_CALENDAR_EVENTS, ids) }
+            }
+        }
         val updated = all[index].copy(
             calendarEventId = calendarEventId,
             calendarId = calendarId,
@@ -535,6 +560,7 @@ class JournalStore(context: Context) {
         private const val PREFS_NAME = "app.olauncher.journal"
         private const val KEY_ENTRIES = "ENTRIES_JSON"
         private const val KEY_SEEDED = "SEEDED_SAMPLE"
+        private const val KEY_SUPPRESSED_CALENDAR_EVENTS = "SUPPRESSED_CALENDAR_EVENTS"
 
         private val dayEntryComparator =
             compareBy<JournalEntry> { it.timeMinutes ?: Int.MAX_VALUE }

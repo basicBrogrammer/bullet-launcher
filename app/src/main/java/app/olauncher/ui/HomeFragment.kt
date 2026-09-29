@@ -883,7 +883,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 fromCalendar = entry.fromCalendar,
             )
         }
-        journalStore.delete(entry.id)
+        journalStore.deleteUserEntry(entry.id)
         requireContext().showToast(R.string.entry_deleted)
         refreshJournal()
     }

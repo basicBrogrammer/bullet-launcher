@@ -279,11 +279,9 @@ object CalendarSyncHelper {
             .filter { allowedCalendarIds == null || it.calendarId in allowedCalendarIds }
         val linked = store.getAll()
             .filter { it.type == BulletType.EVENT && it.calendarEventId != null }
-        val linkedByKey = linked.associateBy { syncKey(it.calendarEventId!!, it.dateKey) }
         val linkedByEventId = linked.groupBy { it.calendarEventId!! }
 
         var changed = false
-        val seenKeys = mutableSetOf<String>()
         val seenEntryIds = mutableSetOf<String>()
         val currentMonth = store.currentMonthKey()
 
@@ -295,66 +293,57 @@ object CalendarSyncHelper {
         }
         val recurringFutureIds = recurringEventIds(context, futureCandidateIds)
 
-        for (remote in remotes) {
-            val title = remote.title.ifBlank { "Event" }
-            val dateKey = dayKeyForEvent(remote.beginMillis, remote.allDay)
-            val key = syncKey(remote.eventId, dateKey)
-
-            val timeMinutes = eventTimeMinutes(remote.beginMillis, remote.allDay)
-            val monthKey = dateKey.take(7)
-            val (log, storeKey) = when {
-                monthKey > currentMonth -> JournalLog.FUTURE to monthKey
-                else -> JournalLog.DAILY to dateKey
+        val placed = buildList {
+            for (remote in remotes) {
+                val title = remote.title.ifBlank { "Event" }
+                val dateKey = dayKeyForEvent(remote.beginMillis, remote.allDay)
+                val timeMinutes = eventTimeMinutes(remote.beginMillis, remote.allDay)
+                val monthKey = dateKey.take(7)
+                val (log, storeKey) = when {
+                    monthKey > currentMonth -> JournalLog.FUTURE to monthKey
+                    else -> JournalLog.DAILY to dateKey
+                }
+                if (log == JournalLog.FUTURE && remote.eventId in recurringFutureIds) continue
+                add(PlacedInstance(remote, title, dateKey, timeMinutes, log, storeKey))
             }
-
-            // Skip repeat events on the Future log (still sync current-month instances).
-            if (log == JournalLog.FUTURE && remote.eventId in recurringFutureIds) {
-                continue
-            }
-
-            seenKeys.add(key)
-
-            val existing = findLinkedEntry(
-                linkedByKey = linkedByKey,
-                linkedByEventId = linkedByEventId,
-                eventId = remote.eventId,
-                dateKey = dateKey,
-                monthKey = monthKey,
-                exactKey = key,
-            )
+        }
+        val today = store.todayKey()
+        for ((eventId, instances) in placed.groupBy { it.remote.eventId }) {
+            if (store.isCalendarEventSuppressed(eventId)) continue
+            val target = chooseStableInstance(instances, today)
+            val existing = linkedByEventId[eventId].orEmpty().minByOrNull { it.createdAt }
             if (existing != null) {
                 seenEntryIds.add(existing.id)
-                seenKeys.add(syncKey(remote.eventId, existing.dateKey))
-                val needsUpdate = existing.text != title ||
-                    existing.dateKey != storeKey ||
-                    existing.log != log ||
-                    existing.timeMinutes != timeMinutes
+                val needsUpdate = existing.text != target.title ||
+                    existing.dateKey != target.storeKey ||
+                    existing.log != target.log ||
+                    existing.timeMinutes != target.timeMinutes
                 if (needsUpdate) {
                     store.updateSyncedEvent(
                         id = existing.id,
-                        text = title,
-                        log = log,
-                        dateKey = storeKey,
-                        calendarId = remote.calendarId,
-                        timeMinutes = timeMinutes,
-                        clearTime = timeMinutes == null,
+                        text = target.title,
+                        log = target.log,
+                        dateKey = target.storeKey,
+                        calendarId = target.remote.calendarId,
+                        timeMinutes = target.timeMinutes,
+                        clearTime = target.timeMinutes == null,
                     )
                     changed = true
                 }
             } else {
                 store.add(
-                    text = title,
+                    text = target.title,
                     type = BulletType.EVENT,
-                    log = log,
-                    dateKey = storeKey,
+                    log = target.log,
+                    dateKey = target.storeKey,
                     priority = false,
-                    calendarEventId = remote.eventId,
-                    calendarId = remote.calendarId,
+                    calendarEventId = eventId,
+                    calendarId = target.remote.calendarId,
                     fromCalendar = true,
-                    timeMinutes = timeMinutes,
+                    timeMinutes = target.timeMinutes,
                 )
                 changed = true
-                Log.d(TAG, "Imported calendar event ${remote.eventId} → $storeKey ($title)")
+                Log.d(TAG, "Imported calendar event $eventId → ${target.storeKey} (${target.title})")
             }
         }
 
@@ -363,8 +352,6 @@ object CalendarSyncHelper {
         for (entry in linked) {
             if (entry.id in seenEntryIds) continue
             val eventId = entry.calendarEventId ?: continue
-            val key = syncKey(eventId, entry.dateKey)
-            if (key in seenKeys) continue
             if (!dateKeyInSyncWindow(entry.dateKey, rangeStart, rangeEnd)) continue
             val calendarId = entry.calendarId
             if (allowedCalendarIds != null && calendarId != null && calendarId !in allowedCalendarIds) {
@@ -399,25 +386,20 @@ object CalendarSyncHelper {
         return changed
     }
 
-    private fun findLinkedEntry(
-        linkedByKey: Map<String, JournalEntry>,
-        linkedByEventId: Map<Long, List<JournalEntry>>,
-        eventId: Long,
-        dateKey: String,
-        monthKey: String,
-        exactKey: String,
-    ): JournalEntry? {
-        linkedByKey[exactKey]?.let { return it }
-        linkedByKey[syncKey(eventId, monthKey)]?.let { return it }
-        val matches = linkedByEventId[eventId].orEmpty()
-        if (matches.isEmpty()) return null
-        matches.find { it.dateKey == dateKey || it.dateKey == monthKey }?.let { return it }
-        matches.find { dateKey.startsWith(it.dateKey) || it.dateKey.startsWith(monthKey) }?.let { return it }
-        // Single non-recurring link: reuse it even if the stored key was month-only.
-        return matches.singleOrNull()
+    private fun chooseStableInstance(instances: List<PlacedInstance>, today: String): PlacedInstance {
+        instances.filter { it.dateKey == today }.minByOrNull { it.remote.beginMillis }?.let { return it }
+        instances.filter { it.dateKey > today }.minByOrNull { it.dateKey }?.let { return it }
+        return instances.maxBy { it.dateKey }
     }
 
-    private fun syncKey(eventId: Long, dateKey: String): String = "$eventId|$dateKey"
+    private data class PlacedInstance(
+        val remote: RemoteEvent,
+        val title: String,
+        val dateKey: String,
+        val timeMinutes: Int?,
+        val log: JournalLog,
+        val storeKey: String,
+    )
 
     private fun syncRangeMillis(): Pair<Long, Long> {
         val start = Calendar.getInstance().apply {
@@ -470,7 +452,7 @@ object CalendarSyncHelper {
         )
 
         return try {
-            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            val instances = context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 val eventIdIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.EVENT_ID)
                 val calIdIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.CALENDAR_ID)
                 val titleIdx = cursor.getColumnIndexOrThrow(CalendarContract.Instances.TITLE)
@@ -495,12 +477,54 @@ object CalendarSyncHelper {
                     }
                 }
             } ?: emptyList()
+            val inactive = inactiveEventIds(context, instances.mapTo(mutableSetOf()) { it.eventId })
+            instances.filter { it.eventId !in inactive }
         } catch (e: SecurityException) {
             Log.e(TAG, "Missing calendar permission while querying instances", e)
             emptyList()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query calendar instances", e)
             emptyList()
+        }
+    }
+
+    /**
+     * Instance rows whose event is deleted, cancelled, or already gone.
+     * A removed series can still appear in Instances until that table is rebuilt.
+     */
+    private fun inactiveEventIds(context: Context, eventIds: Set<Long>): Set<Long> {
+        if (eventIds.isEmpty()) return emptySet()
+        return try {
+            val idList = eventIds.joinToString(",")
+            val found = mutableSetOf<Long>()
+            val inactive = mutableSetOf<Long>()
+            context.contentResolver.query(
+                CalendarContract.Events.CONTENT_URI,
+                arrayOf(
+                    CalendarContract.Events._ID,
+                    CalendarContract.Events.DELETED,
+                    CalendarContract.Events.STATUS,
+                ),
+                "${CalendarContract.Events._ID} IN ($idList)",
+                null,
+                null,
+            )?.use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events._ID)
+                val deletedIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events.DELETED)
+                val statusIdx = cursor.getColumnIndexOrThrow(CalendarContract.Events.STATUS)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idIdx)
+                    found.add(id)
+                    val deleted = !cursor.isNull(deletedIdx) && cursor.getInt(deletedIdx) == 1
+                    val cancelled = !cursor.isNull(statusIdx) &&
+                        cursor.getInt(statusIdx) == CalendarContract.Events.STATUS_CANCELED
+                    if (deleted || cancelled) inactive.add(id)
+                }
+            } ?: return emptySet()
+            inactive.apply { addAll(eventIds - found) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check deleted calendar events", e)
+            emptySet()
         }
     }
 
