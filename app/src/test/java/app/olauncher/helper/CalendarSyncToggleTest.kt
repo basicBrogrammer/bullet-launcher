@@ -71,6 +71,64 @@ class CalendarSyncToggleTest {
     }
 
     @Test
+    fun seriesWithoutTodayStaysOnTheNearestDay() {
+        val store = journalStore()
+        val today = store.todayKey()
+        val prefix = today.dropLast(2)
+        val (firstDay, secondDay) = if (today.takeLast(2) in setOf("01", "02")) {
+            "03" to "04"
+        } else {
+            "01" to "02"
+        }
+        val dayA = prefix + firstDay
+        val dayB = prefix + secondDay
+        val expected = if (dayA > today && dayB > today) minOf(dayA, dayB) else maxOf(dayA, dayB)
+        store.add(
+            text = "Standup",
+            type = BulletType.EVENT,
+            log = JournalLog.DAILY,
+            dateKey = dayA,
+            calendarEventId = EVENT_ID,
+            calendarId = CALENDAR_ID,
+            fromCalendar = true,
+            timeMinutes = 10 * 60,
+        )
+        provider.instances = listOf(instance(dayA, "Standup"), instance(dayB, "Standup"))
+
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        val afterFirst = linkedDates(store)
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        val afterSecond = linkedDates(store)
+        assertEquals(listOf(listOf(expected), listOf(expected)), listOf(afterFirst, afterSecond))
+    }
+
+    @Test
+    fun deletedSeriesStaysOutOfTheJournal() {
+        val store = journalStore()
+        val today = store.todayKey()
+        val entry = store.add(
+            text = "Standup",
+            type = BulletType.EVENT,
+            log = JournalLog.DAILY,
+            dateKey = today,
+            calendarEventId = EVENT_ID,
+            calendarId = CALENDAR_ID,
+            fromCalendar = true,
+            timeMinutes = 10 * 60,
+        )
+        provider.instances = listOf(
+            instance(today, "Standup"),
+            instance(otherDayInSameMonth(today), "Standup"),
+        )
+        store.deleteUserEntry(entry.id)
+
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        assertEquals(emptyList<String>(), linkedDates(store))
+        CalendarSyncHelper.syncIntoJournal(context(), store)
+        assertEquals(emptyList<String>(), linkedDates(store))
+    }
+
+    @Test
     fun oneOffRescheduleLandsOnceAndStays() {
         val store = journalStore()
         val today = store.todayKey()
