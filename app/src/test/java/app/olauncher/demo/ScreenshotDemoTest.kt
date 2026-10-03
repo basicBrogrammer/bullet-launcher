@@ -380,11 +380,11 @@ class ScreenshotDemoTest {
 
     @Test
     fun homeWithAppDrawer() = capture("06c_home_app_drawer", R.layout.fragment_home) { activity, root ->
-        populateHomeDemo(activity, root, expanded = true)
+        populateHomeDemo(activity, root, expanded = false)
         val density = activity.resources.displayMetrics.density
         val overlay = root.findViewById<ViewGroup>(R.id.appDrawerOverlay)
         overlay.visibility = View.VISIBLE
-        overlay.setPadding(0, 0, 0, (240 * density).toInt())
+        overlay.setPadding(0, 0, 0, (120 * density).toInt())
         val drawer = LayoutInflater.from(activity).inflate(R.layout.fragment_app_drawer, overlay, false)
         overlay.addView(
             drawer,
@@ -406,7 +406,7 @@ class ScreenshotDemoTest {
         )
         recycler.adapter = adapter
         adapter.setAppList(demoAppList())
-        root.findViewById<View>(R.id.addBulletButton).visibility = View.GONE
+        root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
     }
 
     private fun populateHomeDemo(activity: Activity, root: View, expanded: Boolean, scrim: Boolean = true) {
@@ -492,6 +492,8 @@ class ScreenshotDemoTest {
             }
         }
         root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.homeAppsRow2).visibility = if (expanded) View.VISIBLE else View.GONE
+        root.findViewById<View>(R.id.homeAppsRow3).visibility = if (expanded) View.VISIBLE else View.GONE
         root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
         val fab = root.findViewById<View>(R.id.addBulletButton)
         val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
@@ -702,12 +704,29 @@ class ScreenshotDemoTest {
         val width = metrics.widthPixels
         val height = metrics.heightPixels
         val decor = activity.window.decorView
-        decor.measure(
-            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
-        )
-        decor.layout(0, 0, width, height)
-        shadowOf(Looper.getMainLooper()).idle()
+        fun layoutDecor() {
+            decor.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
+            )
+            decor.layout(0, 0, width, height)
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+        layoutDecor()
+        val sheet = root.findViewById<View>(R.id.homeAppsBottomSheet)
+        val fab = root.findViewById<View>(R.id.addBulletButton)
+        if (sheet != null && fab != null && sheet.height > 0 &&
+            fab.layoutParams is android.widget.FrameLayout.LayoutParams
+        ) {
+            val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
+            fabParams.bottomMargin = sheet.height + (12 * metrics.density).toInt()
+            fab.layoutParams = fabParams
+            val overlay = root.findViewById<View>(R.id.appDrawerOverlay)
+            if (overlay != null && overlay.visibility == View.VISIBLE) {
+                overlay.setPadding(0, 0, 0, sheet.height)
+            }
+            layoutDecor()
+        }
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)

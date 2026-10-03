@@ -389,6 +389,8 @@ class GuidedWalkthroughDemoTest {
             }
         }
         root.findViewById<View>(R.id.homeAppsBottomSheet).visibility = View.VISIBLE
+        root.findViewById<View>(R.id.homeAppsRow2).visibility = if (expanded) View.VISIBLE else View.GONE
+        root.findViewById<View>(R.id.homeAppsRow3).visibility = if (expanded) View.VISIBLE else View.GONE
         root.findViewById<View>(R.id.addBulletButton).visibility = View.VISIBLE
         val fab = root.findViewById<View>(R.id.addBulletButton)
         val fabParams = fab.layoutParams as android.widget.FrameLayout.LayoutParams
