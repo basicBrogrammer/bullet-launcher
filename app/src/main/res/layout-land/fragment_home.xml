@@ -152,138 +152,140 @@
                 android:background="@drawable/bg_bottom_sheet_handle" />
         </FrameLayout>
 
-        <GridLayout
+        <LinearLayout
             android:id="@+id/homeAppsLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:alignmentMode="alignBounds"
-            android:columnCount="5"
+            android:orientation="vertical"
             android:paddingHorizontal="16dp"
-            android:paddingBottom="8dp"
-            android:rowCount="3"
-            android:useDefaultMargins="false">
+            android:paddingBottom="8dp">
 
-            <include
-                android:id="@+id/homeApp1"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:id="@+id/homeAppsRow1"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                android:orientation="horizontal">
 
-            <include
-                android:id="@+id/homeApp2"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
+                <include
+                    android:id="@+id/homeApp1"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp2"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp3"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp4"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp5"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/homeAppsRow2"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                android:orientation="horizontal">
 
-            <include
-                android:id="@+id/homeApp3"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
+                <include
+                    android:id="@+id/homeApp6"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp7"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp8"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp9"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/homeApp10"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/homeAppsRow3"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                android:orientation="horizontal">
 
-            <include
-                android:id="@+id/homeApp4"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                <include
+                    android:id="@+id/homeApp11"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
 
-            <include
-                android:id="@+id/homeApp5"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                <include
+                    android:id="@+id/homeApp12"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
 
-            <include
-                android:id="@+id/homeApp6"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                <include
+                    android:id="@+id/homeApp13"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
 
-            <include
-                android:id="@+id/homeApp7"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
+                <include
+                    android:id="@+id/homeApp14"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
 
-            <include
-                android:id="@+id/homeApp8"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp9"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp10"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp11"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp12"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp13"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp14"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-            <include
-                android:id="@+id/homeApp15"
-                layout="@layout/item_home_app"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal|center_vertical" />
-
-        </GridLayout>
+                <include
+                    android:id="@+id/homeApp15"
+                    layout="@layout/item_home_app"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Add bullet FAB — visible on all journal pages. Long-press opens Ask journal. -->

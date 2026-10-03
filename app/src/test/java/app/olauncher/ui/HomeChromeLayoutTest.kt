@@ -31,7 +31,12 @@ class HomeChromeLayoutTest {
         val expandedFabBottom = fab.bottom
         assertTrue("expanded sheet should lay out", expandedSheetHeight > 0)
 
-        activity.findViewById<View>(R.id.homeAppsSheetHandleArea).performClick()
+        val prefs = Prefs(activity)
+        prefs.setAppName(1, "Phone")
+        prefs.setAppPackage(1, "com.example.phone")
+        prefs.setAppActivityClassName(1, "")
+        prefs.setIsShortcut(1, false)
+        activity.findViewById<View>(R.id.homeApp1).performClick()
         shadowOf(Looper.getMainLooper()).idle()
 
         val collapsedSheetHeight = sheet.height
