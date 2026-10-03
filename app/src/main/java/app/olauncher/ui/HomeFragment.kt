@@ -1,6 +1,7 @@
 package app.olauncher.ui
 
 import android.Manifest
+import android.animation.LayoutTransition
 import android.app.Dialog
 import android.app.admin.DevicePolicyManager
 import android.content.ClipDescription
@@ -1023,6 +1024,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             }
         }
         binding.homeAppsSheetHandleArea.setOnTouchListener(handleGestures)
+        binding.mainLayout.layoutTransition?.apply {
+            disableTransitionType(LayoutTransition.CHANGE_APPEARING)
+            disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
+        }
         binding.homeAppsBottomSheet.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (!isAdded || _binding == null) return@addOnLayoutChangeListener
             if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
@@ -1048,16 +1053,17 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             if (expanded) R.string.collapse_apps_sheet else R.string.expand_apps_sheet
         )
         binding.homeAppsBottomSheet.requestLayout()
-        binding.homeAppsBottomSheet.post {
-            if (!isAdded || _binding == null) return@post
-            updateDrawerOverlayPadding()
-            updateAddButtonMargin()
-        }
+    }
+
+    private fun dockLaidOutHeight(): Int {
+        if (!binding.homeAppsBottomSheet.isVisible) return 0
+        val measured = binding.homeAppsBottomSheet.measuredHeight
+        return if (measured > 0) measured else binding.homeAppsBottomSheet.height
     }
 
     private fun updateAddButtonMargin() {
         val sheetVisible = binding.homeAppsBottomSheet.isVisible
-        val sheetHeight = if (sheetVisible) binding.homeAppsBottomSheet.height else 0
+        val sheetHeight = dockLaidOutHeight()
         val fabMargin = if (sheetVisible) {
             (if (sheetHeight > 0) sheetHeight else collapsedSheetFallbackMargin()) + 12.dpToPx()
         } else {
@@ -1356,7 +1362,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun updateDrawerOverlayPadding() {
-        val sheetHeight = binding.homeAppsBottomSheet.height
+        val sheetHeight = dockLaidOutHeight()
         if (sheetHeight > 0) {
             binding.appDrawerOverlay.setPadding(0, 0, 0, sheetHeight)
         }
