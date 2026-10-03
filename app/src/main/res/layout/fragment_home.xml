@@ -122,7 +122,6 @@
         android:focusable="true"
         android:visibility="gone" />
 
-    <!-- Home apps bottom sheet: 5 columns × 3 rows -->
     <LinearLayout
         android:id="@+id/homeAppsBottomSheet"
         android:layout_width="match_parent"
@@ -286,7 +285,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Add bullet FAB — visible on all journal pages. Long-press opens Ask journal. -->
     <ImageView
         android:id="@+id/addBulletButton"
         android:layout_width="56dp"

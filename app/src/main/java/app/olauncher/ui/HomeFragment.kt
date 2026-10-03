@@ -976,7 +976,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         if (prefs.homeAppsNum <= 0) prefs.homeAppsNum = Constants.MAX_HOME_APPS
         binding.homeAppsBottomSheet.isVisible = true
 
-        // Fill all 15 slots; collapsed sheet then hides rows 2–3.
         for (location in 1..Constants.MAX_HOME_APPS) {
             val appView = homeAppViews[location - 1]
             if (location == Constants.HOME_DRAWER_SLOT) {
@@ -1075,8 +1074,11 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             binding.addBulletButton.layoutParams = params
         }
         val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
-        // Midway header (28dp) + clock row clearance.
-        val topMargin = if (binding.dateTimeLayout.isVisible) 92.dpToPx() else 36.dpToPx()
+        val topMargin = if (binding.dateTimeLayout.isVisible) {
+            resources.getDimensionPixelSize(R.dimen.journal_pager_top_with_clock)
+        } else {
+            resources.getDimensionPixelSize(R.dimen.journal_pager_top)
+        }
         if (pagerParams.bottomMargin != pagerMargin || pagerParams.topMargin != topMargin) {
             pagerParams.bottomMargin = pagerMargin
             pagerParams.topMargin = topMargin
