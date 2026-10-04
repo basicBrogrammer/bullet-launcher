@@ -1,6 +1,7 @@
 package app.olauncher.ui
 
 import android.Manifest
+import android.animation.LayoutTransition
 import android.app.Dialog
 import android.app.admin.DevicePolicyManager
 import android.content.ClipDescription
@@ -976,7 +977,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         if (prefs.homeAppsNum <= 0) prefs.homeAppsNum = Constants.MAX_HOME_APPS
         binding.homeAppsBottomSheet.isVisible = true
 
-        // Fill all 15 slots; collapsed sheet then hides rows 2–3.
         for (location in 1..Constants.MAX_HOME_APPS) {
             val appView = homeAppViews[location - 1]
             if (location == Constants.HOME_DRAWER_SLOT) {
@@ -1024,6 +1024,16 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             }
         }
         binding.homeAppsSheetHandleArea.setOnTouchListener(handleGestures)
+        binding.mainLayout.layoutTransition?.apply {
+            disableTransitionType(LayoutTransition.CHANGE_APPEARING)
+            disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
+        }
+        binding.homeAppsBottomSheet.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (!isAdded || _binding == null) return@addOnLayoutChangeListener
+            if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
+            updateDrawerOverlayPadding()
+            updateAddButtonMargin()
+        }
     }
 
     private fun setHomeAppsSheetExpanded(expanded: Boolean) {
@@ -1037,19 +1047,23 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         homeAppViews.forEachIndexed { index, appView ->
             appView.isVisible = index < visibleCount
         }
+        binding.homeAppsRow2.isVisible = expanded
+        binding.homeAppsRow3.isVisible = expanded
         binding.homeAppsSheetHandleArea.contentDescription = getString(
             if (expanded) R.string.collapse_apps_sheet else R.string.expand_apps_sheet
         )
-        binding.homeAppsBottomSheet.post {
-            if (!isAdded || _binding == null) return@post
-            updateDrawerOverlayPadding()
-            updateAddButtonMargin()
-        }
+        binding.homeAppsBottomSheet.requestLayout()
+    }
+
+    private fun dockLaidOutHeight(): Int {
+        if (!binding.homeAppsBottomSheet.isVisible) return 0
+        val measured = binding.homeAppsBottomSheet.measuredHeight
+        return if (measured > 0) measured else binding.homeAppsBottomSheet.height
     }
 
     private fun updateAddButtonMargin() {
         val sheetVisible = binding.homeAppsBottomSheet.isVisible
-        val sheetHeight = if (sheetVisible) binding.homeAppsBottomSheet.height else 0
+        val sheetHeight = dockLaidOutHeight()
         val fabMargin = if (sheetVisible) {
             (if (sheetHeight > 0) sheetHeight else collapsedSheetFallbackMargin()) + 12.dpToPx()
         } else {
@@ -1061,18 +1075,27 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             72.dpToPx()
         }
         val params = binding.addBulletButton.layoutParams as FrameLayout.LayoutParams
-        params.bottomMargin = fabMargin
-        binding.addBulletButton.layoutParams = params
+        if (params.bottomMargin != fabMargin) {
+            params.bottomMargin = fabMargin
+            binding.addBulletButton.layoutParams = params
+        }
         val pagerParams = binding.journalPager.layoutParams as FrameLayout.LayoutParams
-        pagerParams.bottomMargin = pagerMargin
-        // Midway header (28dp) + clock row clearance.
-        val topMargin = if (binding.dateTimeLayout.isVisible) 92.dpToPx() else 36.dpToPx()
-        pagerParams.topMargin = topMargin
-        binding.journalPager.layoutParams = pagerParams
+        val topMargin = if (binding.dateTimeLayout.isVisible) {
+            resources.getDimensionPixelSize(R.dimen.journal_pager_top_with_clock)
+        } else {
+            resources.getDimensionPixelSize(R.dimen.journal_pager_top)
+        }
+        if (pagerParams.bottomMargin != pagerMargin || pagerParams.topMargin != topMargin) {
+            pagerParams.bottomMargin = pagerMargin
+            pagerParams.topMargin = topMargin
+            binding.journalPager.layoutParams = pagerParams
+        }
         val collectionParams = binding.collectionOverlay.layoutParams as FrameLayout.LayoutParams
-        collectionParams.bottomMargin = pagerMargin
-        collectionParams.topMargin = topMargin
-        binding.collectionOverlay.layoutParams = collectionParams
+        if (collectionParams.bottomMargin != pagerMargin || collectionParams.topMargin != topMargin) {
+            collectionParams.bottomMargin = pagerMargin
+            collectionParams.topMargin = topMargin
+            binding.collectionOverlay.layoutParams = collectionParams
+        }
     }
 
     private fun collapsedSheetFallbackMargin(): Int =
@@ -1339,7 +1362,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun updateDrawerOverlayPadding() {
-        val sheetHeight = binding.homeAppsBottomSheet.height
+        val sheetHeight = dockLaidOutHeight()
         if (sheetHeight > 0) {
             binding.appDrawerOverlay.setPadding(0, 0, 0, sheetHeight)
         }
